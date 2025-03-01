@@ -1,7 +1,7 @@
 use glad_gles2::gl;
 use glmath::vector::Vector2;
 use std::{ffi::CString, num::NonZeroU32, time::Instant};
-use winter::simple::{self, misic, vao::primitives};
+use winter::{common, primitives};
 
 fn main() -> Result<(), String> {
     let width = 800;
@@ -23,7 +23,7 @@ fn main() -> Result<(), String> {
     let color3 = primitives::Color::from_rgb(0, 0, 255);
 
     let margin = Vector2::from([0.2; 2]);
-    let vao_builder = misic::create_grid(
+    let vao_builder = common::create_grid(
         Vector2::from([-1.; 2]).add(margin),
         Vector2::from([1.; 2]).sub(margin),
         NonZeroU32::new(arena_cell_length).unwrap(),
@@ -42,7 +42,7 @@ fn main() -> Result<(), String> {
         },
     );
 
-    let mut context = simple::Context::new(
+    let mut context = winter::Context::new(
         width,
         height,
         title,

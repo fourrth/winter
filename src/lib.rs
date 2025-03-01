@@ -1,6 +1,15 @@
 //! This is the library for my opengl application
 
-pub mod raw;
-pub mod simple;
+mod buffer;
+mod shader;
+mod vao;
 
-pub type Float = f32;
+pub mod context;
+pub use context::*;
+
+pub mod raw;
+
+#[cfg(feature = "common")]
+pub mod common;
+
+type Float = f32;

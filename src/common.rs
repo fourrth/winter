@@ -1,18 +1,12 @@
+//! This is a collection of quick and dirty functions that are good to have
+
 use std::num::NonZeroU32;
 
-use crate::Float;
 use bytemuck::Contiguous;
+use glad_gles2::gl;
 use glmath::vector::{Vector2, Vector3};
 
-use super::vao::{primitives, VertexArrayObjectBuilder};
-#[inline(always)]
-pub fn convert_comp_triangle(data: &mut [u8]) -> &mut [Vector3<Float>; 3] {
-    unsafe {
-        (data.as_mut_ptr() as *mut [Vector3<Float>; 3])
-            .as_mut()
-            .unwrap_unchecked()
-    }
-}
+use crate::{primitives, vao::VertexArrayObjectBuilder, Float};
 
 #[inline(always)]
 pub fn create_rectangle(
@@ -86,4 +80,27 @@ pub fn create_grid<F: Fn(u32, u32, u32) -> primitives::Color>(
         p1.0[1] -= cell_height + inner_margin;
     }
     builder
+}
+
+#[inline(always)]
+pub fn convert_comp_triangle(data: &mut [u8]) -> &mut [Vector3<Float>; 3] {
+    unsafe {
+        (data.as_mut_ptr() as *mut [Vector3<Float>; 3])
+            .as_mut()
+            .unwrap_unchecked()
+    }
+}
+pub fn roll_gl_errors() {
+    unsafe {
+        loop {
+            let error = gl::GetError();
+            if error != gl::NO_ERROR {
+                println!("OpenGL error: {}", error);
+                panic!("HIT GL ERROR!!!");
+                // Handle or log the error as needed
+            } else {
+                break; // No more errors
+            }
+        }
+    }
 }
