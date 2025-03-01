@@ -1,0 +1,19 @@
+[package]
+name = "snake"
+version = "0.1.0"
+edition = "2021"
+description = "Iconic snake game!"
+
+[lib]
+path = "snake.rs"
+
+[[example]]
+name = "ascii"
+path = "examples/ascii.rs"
+
+[dependencies]
+rand = {version = "0.8.*"}
+
+[dev-dependencies]
+crossterm ={version = "0.27.*"}
+
