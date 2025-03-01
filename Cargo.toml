@@ -32,6 +32,10 @@ path = "examples/simple-raw/bin.rs"
 name = "key_callback-raw"
 path = "examples/key_callback-raw/bin.rs"
 
+[features]
+default = ["common"]
+common = []
+
 [dependencies]
 glad-gles2 = {path = "glad-gles2"}
 glfw = {version = "0.55.*"}

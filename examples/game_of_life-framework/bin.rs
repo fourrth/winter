@@ -10,9 +10,20 @@ use std::{
 
 use game_of_life::Context;
 use glad_gles2::gl;
-use glmath::vector::Vector2;
-use winter::simple::{self, misic, vao::primitives};
+use glmath::{vector::Vector2, Element};
+use winter::{common, primitives};
+
 const SAVE_FILE_OUTPUT_DIR: &str = "./target/save_data.txt";
+const DEFAULT_TPS: u64 = 10;
+
+#[inline(always)]
+fn clampmin<T: Element>(input: T, min: T) -> T {
+    if input < min {
+        min
+    } else {
+        input
+    }
+}
 
 // Some things I could add is like a way to back up generations
 // (basically) just do the rules I have set up but in reverse,
@@ -63,7 +74,7 @@ fn create_gol_cxt(arena_cell_length: usize, file_load: Option<&str>) -> game_of_
         .unwrap()
 }
 
-static TICKS_PER_SECOND: AtomicU64 = AtomicU64::new(10);
+static TICKS_PER_SECOND: AtomicU64 = AtomicU64::new(DEFAULT_TPS);
 
 const TICK_INC_AMT: u64 = 1;
 
@@ -146,7 +157,7 @@ fn main() -> Result<(), String> {
     let color_alive = primitives::Color::from_rgb(0, 255, 255);
     let color_dead = primitives::Color::from_rgb(0, 0, 255);
 
-    let vao_builder = misic::create_grid(
+    let vao_builder = common::create_grid(
         Vector2::from([-1.; 2]).add(Vector2::from([0.1; 2])),
         Vector2::from([1.; 2]).sub(Vector2::from([0.1; 2])),
         NonZeroU32::new(arena_size as u32).unwrap(),
@@ -174,7 +185,7 @@ fn main() -> Result<(), String> {
     static PRESS_LEFT: AtomicBool = AtomicBool::new(false);
     static PRESS_RIGHT: AtomicBool = AtomicBool::new(false);
 
-    let mut context = simple::Context::new(
+    let mut context = winter::Context::new(
         width,
         height,
         title,
@@ -231,8 +242,10 @@ fn main() -> Result<(), String> {
         context.vao.bind();
 
         static SHOULD_CLOSE: AtomicBool = AtomicBool::new(false);
+
         const EVENT_TICKS_PER_SECOND: u64 = 20;
-        let event_th = thread::spawn(|| {
+
+        let event_th = thread::spawn(move || {
             while SHOULD_CLOSE.load(Ordering::Relaxed) == false {
                 //TODO: create an event thread
                 if PRESS_LEFT.load(Ordering::Relaxed) {
@@ -241,30 +254,24 @@ fn main() -> Result<(), String> {
                 if PRESS_RIGHT.load(Ordering::Relaxed) {
                     press_right();
                 }
-                thread::sleep(Duration::from_millis(1000 / EVENT_TICKS_PER_SECOND));
-            }
-        });
-
-        let tick_th = thread::spawn(move || {
-            while SHOULD_CLOSE.load(Ordering::Relaxed) == false {
-                if let Some(cxt) = &mut GOL_CXT {
-                    if DO_RESTART.load(Ordering::Relaxed) {
-                        // then restart the game_of_life context
-                        DO_RESTART.store(false, Ordering::Relaxed);
-                        if SHOULD_LOAD_FROM_FILE.load(Ordering::Relaxed) {
-                            GOL_CXT = Some(create_gol_cxt(
-                                arena_size as usize,
-                                Some(SAVE_FILE_OUTPUT_DIR),
-                            ));
-                        } else {
-                            GOL_CXT = Some(create_gol_cxt(arena_size as usize, None));
-                        }
+                if DO_RESTART.load(Ordering::Relaxed) {
+                    // then restart the game_of_life context
+                    DO_RESTART.store(false, Ordering::Relaxed);
+                    if SHOULD_LOAD_FROM_FILE.load(Ordering::Relaxed) {
+                        GOL_CXT = Some(create_gol_cxt(
+                            arena_size as usize,
+                            Some(SAVE_FILE_OUTPUT_DIR),
+                        ));
+                    } else {
+                        GOL_CXT = Some(create_gol_cxt(arena_size as usize, None));
                     }
-                    if DO_SAVE.load(Ordering::Relaxed) {
+                }
+                if DO_SAVE.load(Ordering::Relaxed) {
+                    if let Some(cxt) = &mut GOL_CXT {
                         DO_SAVE.store(false, Ordering::Relaxed);
                         // for now we just write out to a file with
                         // json because I don't really care...
-                        let thing = File::create(SAVE_FILE_OUTPUT_DIR);
+                        let thing: Result<File, io::Error> = File::create(SAVE_FILE_OUTPUT_DIR);
                         match thing {
                             Ok(mut file) => {
                                 let _ = writeln!(file, "{}", serde_json::to_string(&cxt).unwrap());
@@ -275,10 +282,30 @@ fn main() -> Result<(), String> {
                             }
                         }
                     }
+                }
+                thread::sleep(Duration::from_millis(1000 / EVENT_TICKS_PER_SECOND));
+            }
+        });
+
+        let tick_th = thread::spawn(move || {
+            let mut last_t: Option<Instant> = None;
+
+            while SHOULD_CLOSE.load(Ordering::Relaxed) == false {
+                if let Some(last) = last_t {
+                    // how long a tick took
+                    thread::sleep(Duration::from_secs_f64(clampmin(
+                        (1f64 / (TICKS_PER_SECOND.load(Ordering::Relaxed) as f64))
+                            - last.elapsed().as_secs_f64(),
+                        0f64,
+                    )));
+                }
+                if let Some(cxt) = &mut GOL_CXT {
                     if TICKING.load(Ordering::Relaxed) {
+                        // want to tick: go to target tps
                         cxt.tick();
                     }
                 }
+                last_t = Some(Instant::now());
             }
         });
 
@@ -308,7 +335,7 @@ fn main() -> Result<(), String> {
                     };
 
                     for triangle_color in context.vao.get_color_component_mut(cx) {
-                        for point_color in misic::convert_comp_triangle(triangle_color) {
+                        for point_color in common::convert_comp_triangle(triangle_color) {
                             *point_color = c.0;
                         }
                     }
