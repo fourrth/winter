@@ -2,8 +2,6 @@
 
 A general opengl wrapping framework
 
-This crate is currently set up as first: a base, raw wrapper around the glfw ffi and opengl functions. These items are kept in the `raw` module. There is also the `simple` module which utilizes the `raw` module to more simply use the library.
-
 ## Usage
 
 The library is currently being reworked, so tags and refs may change in the future

@@ -1,10 +1,10 @@
-#version 310 es
+#version 320 es
+precision lowp float;
 
-out mediump vec4 outputF;
+out vec4 outputF;
+in vec4 vertexColor;
 
-in mediump vec4 vertexColor;
-
-layout (location = 2) uniform mediump float timeu;
+layout (location = 2) uniform float timeu;
 
 void main()
 {

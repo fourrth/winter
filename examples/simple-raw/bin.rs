@@ -38,7 +38,7 @@ struct SimpleStruct {
 }
 impl SimpleStruct {
     pub fn new(width: GLint, height: GLint, kind: DrawKind) -> Self {
-        let vertex_shader_text: &'static [u8] = b"#version 330 core
+        let vertex_shader_text: &'static [u8] = b"#version 320 es
         layout (location = 0) in vec3 vertPosition;
     
         void main()
@@ -46,7 +46,8 @@ impl SimpleStruct {
            gl_Position = vec4(vertPosition,1.0);
         };\0";
 
-        let fragment_shader_text: &'static [u8] = b"#version 330 core
+        let fragment_shader_text: &'static [u8] = b"#version 320 es
+        precision lowp float;
         out vec4 outputF;
         void main()
         {
@@ -98,7 +99,7 @@ impl SimpleStruct {
             glfw::ffi::glfwWindowHint(glfw::ffi::CLIENT_API, glfw::ffi::OPENGL_ES_API);
 
             glfw::ffi::glfwWindowHint(glfw::ffi::CONTEXT_VERSION_MAJOR, 3);
-            glfw::ffi::glfwWindowHint(glfw::ffi::CONTEXT_VERSION_MINOR, 1);
+            glfw::ffi::glfwWindowHint(glfw::ffi::CONTEXT_VERSION_MINOR, 2);
             glfw::ffi::glfwWindowHint(glfw::ffi::OPENGL_PROFILE, glfw::ffi::OPENGL_CORE_PROFILE);
 
             glfw::ffi::glfwWindowHint(glfw::ffi::RESIZABLE, glfw::ffi::FALSE);

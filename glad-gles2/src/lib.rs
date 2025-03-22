@@ -1,2 +1,2 @@
-#[allow(clippy::all)]
+#[allow(warnings)]
 pub mod gl;

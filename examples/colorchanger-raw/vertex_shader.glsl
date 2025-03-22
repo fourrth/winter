@@ -1,4 +1,4 @@
-#version 310 es
+#version 320 es
 in vec3 vertPosition;
 
 void main()

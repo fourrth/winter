@@ -1,7 +1,8 @@
-#version 310 es
+#version 320 es
 
-in mediump vec4 vertexColor;
-out mediump vec4 fragColor;
+precision lowp float;
+in vec4 vertexColor;
+out vec4 fragColor;
 void main()
 {
 	fragColor = vertexColor;

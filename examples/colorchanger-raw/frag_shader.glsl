@@ -1,7 +1,8 @@
-#version 310 es
-out mediump vec4 outputF;
+#version 320 es
+precision lowp float;
 
-uniform mediump float timeu;
+out vec4 outputF;
+uniform float timeu;
 
 void main()
 {{

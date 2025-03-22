@@ -13,7 +13,7 @@ use std::{
 use glad_gles2::gl;
 use glmath::vector::Vector2;
 use snake::{Coordinate, Direction};
-use winter::simple::{misic, vao::primitives};
+use winter::{common, primitives};
 
 #[inline(always)]
 fn clamp_pos(num: f32) -> f32 {
@@ -44,7 +44,7 @@ fn main() {
     let color_snake_empty = primitives::Color::from_rgb(0, 0, 255);
     let color_snake_food = primitives::Color::from_rgb(255, 0, 0);
 
-    let vao_builder = misic::create_grid(
+    let vao_builder = common::create_grid(
         Vector2::from([-1.; 2]).add(Vector2::from([0.1; 2])),
         Vector2::from([1.; 2]).sub(Vector2::from([0.1; 2])),
         NonZeroU32::new(ARENA_CELL_LENGTH as u32).unwrap(),
@@ -53,7 +53,7 @@ fn main() {
         |_, _, _| color_snake_empty,
     );
 
-    let mut context = winter::simple::Context::new(
+    let mut context = winter::Context::new(
         width,
         height,
         title,
@@ -226,7 +226,7 @@ fn main() {
                         };
 
                         for triangle_color in context.vao.get_color_component_mut(cx) {
-                            for point_color in misic::convert_comp_triangle(triangle_color) {
+                            for point_color in common::convert_comp_triangle(triangle_color) {
                                 *point_color = c.0;
                             }
                         }

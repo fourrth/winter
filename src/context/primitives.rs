@@ -77,7 +77,7 @@ macro_rules! float_data_to_u8_slice {
 
 pub mod triangle {
     use super::*;
-    use crate::simple::vao::Component;
+    use crate::vao::Component;
 
     pub type Data = ([Vector3<Float>; 3], [Color; 3]);
 
@@ -85,10 +85,7 @@ pub mod triangle {
     pub const FLOAT_AMT: usize = 18;
 
     pub fn export(data: Data) -> Component {
-        Component {
-            component_kind: KIND,
-            data: Box::from(unsafe { float_data_to_u8_slice!(&data, FLOAT_AMT) }),
-        }
+        Component::new(KIND, unsafe { float_data_to_u8_slice!(&data, FLOAT_AMT) })
     }
 
     fn new0_no_indices(data: &[VertColorp]) -> Result<Vec<Data>, String> {
@@ -164,17 +161,14 @@ pub mod triangle {
 
 pub mod rectangle {
     use super::*;
-    use crate::simple::vao::Component;
+    use crate::vao::Component;
 
     pub type Data = [triangle::Data; 2];
     pub const KIND: ComponentKind = ComponentKind::Rectangle;
     pub const FLOAT_AMT: usize = triangle::FLOAT_AMT * 2;
 
     pub fn export(data: Data) -> Component {
-        Component {
-            component_kind: KIND,
-            data: Box::from(unsafe { float_data_to_u8_slice!(&data, FLOAT_AMT) }),
-        }
+        Component::new(KIND, unsafe { float_data_to_u8_slice!(&data, FLOAT_AMT) })
     }
 
     /// Create Rectangle using 4 points and 4 colors
@@ -207,17 +201,14 @@ pub mod rectangle {
 
 pub mod rectangular_prism {
     use super::*;
-    use crate::simple::vao::Component;
+    use crate::vao::Component;
 
     pub type Data = [rectangle::Data; 6];
     pub const KIND: ComponentKind = ComponentKind::RectangularPrism;
     pub const FLOAT_AMT: usize = rectangle::FLOAT_AMT * 6;
 
     pub fn export(data: Data) -> Component {
-        Component {
-            component_kind: KIND,
-            data: Box::from(unsafe { float_data_to_u8_slice!(&data, FLOAT_AMT) }),
-        }
+        Component::new(KIND, unsafe { float_data_to_u8_slice!(&data, FLOAT_AMT) })
     }
 
     /// Create Rectangular Prism using 8 points and 6 colors

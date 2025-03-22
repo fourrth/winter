@@ -1,9 +1,9 @@
-pub mod primitives;
 use std::ffi;
 
 use crate::{
+    buffer::{GLType, IndexBuffer, Layout, VertexBuffer},
+    primitives,
     raw::buffers::{self, BufferTarget},
-    simple::buffer::{GLType, IndexBuffer, Layout, VertexBuffer},
     Float,
 };
 use glad_gles2::gl;
@@ -13,6 +13,15 @@ use glmath::vector::Vector3;
 pub struct Component {
     component_kind: primitives::ComponentKind,
     data: Box<[u8]>,
+}
+
+impl Component {
+    pub fn new<'a>(kind: primitives::ComponentKind, data: &'a [u8]) -> Self {
+        Self {
+            component_kind: kind,
+            data: Box::from(data),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

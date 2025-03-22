@@ -1,28 +1,10 @@
 use std::ffi::{c_int, c_void, CString};
 
-use self::shader::Program;
 use glad_gles2::gl;
-use glfw::ffi::{glfwWindowShouldClose, GLFWkeyfun, GLFWwindow};
+use glfw::ffi::{glfwWindowShouldClose, GLFWwindow};
 
-pub mod buffer;
-pub mod misic;
-pub mod shader;
-pub mod vao;
-
-pub fn roll_gl_errors() {
-    unsafe {
-        loop {
-            let error = gl::GetError();
-            if error != gl::NO_ERROR {
-                println!("OpenGL error: {}", error);
-                panic!("HIT GL ERROR!!!");
-                // Handle or log the error as needed
-            } else {
-                break; // No more errors
-            }
-        }
-    }
-}
+pub type GlfwInputFunction =
+    fn(window: *mut GLFWwindow, key: c_int, scancode: c_int, action: c_int, mods: c_int);
 
 fn proc_loader(str: &'static str) -> *const c_void {
     unsafe {
@@ -48,7 +30,7 @@ impl Window {
             glfw::ffi::glfwWindowHint(glfw::ffi::CLIENT_API, glfw::ffi::OPENGL_ES_API);
 
             glfw::ffi::glfwWindowHint(glfw::ffi::CONTEXT_VERSION_MAJOR, 3);
-            glfw::ffi::glfwWindowHint(glfw::ffi::CONTEXT_VERSION_MINOR, 1);
+            glfw::ffi::glfwWindowHint(glfw::ffi::CONTEXT_VERSION_MINOR, 2);
             glfw::ffi::glfwWindowHint(glfw::ffi::OPENGL_PROFILE, glfw::ffi::OPENGL_CORE_PROFILE);
 
             glfw::ffi::glfwWindowHint(glfw::ffi::RESIZABLE, glfw::ffi::FALSE);
@@ -95,12 +77,10 @@ impl Drop for Window {
         }
     }
 }
-type GlfwInputFunction =
-    fn(window: *mut GLFWwindow, key: c_int, scancode: c_int, action: c_int, mods: c_int);
 
-static mut USER_KEY_FUNC: Option<GlfwInputFunction> = None;
+pub static mut USER_KEY_FUNC: Option<GlfwInputFunction> = None;
 
-extern "C" fn main_context_keyboard_input(
+pub extern "C" fn main_context_keyboard_input(
     // window won't be needed as
     // the user is aware of window
     // they are refering to as they
@@ -114,42 +94,4 @@ extern "C" fn main_context_keyboard_input(
     // it should be impossible to get here
     // without also setting input_f
     unsafe { USER_KEY_FUNC.unwrap_unchecked()(window, key, scancode, action, mods) }
-}
-
-pub struct Context {
-    pub window: Window,
-    pub program: Program,
-    pub vao: vao::VertexArrayObject,
-}
-impl Context {
-    pub fn new(
-        width: i32,
-        height: i32,
-        title: CString,
-        vertex_shader_text: CString,
-        fragment_shader_text: CString,
-        input_function: Option<GlfwInputFunction>,
-        vao: vao::VertexArrayObjectBuilder,
-    ) -> Result<Self, String> {
-        let window = Window::new(width, height, title)?;
-        let program = Program::new(vertex_shader_text, fragment_shader_text)?;
-        unsafe {
-            if let Some(input_f) = input_function {
-                glfw::ffi::glfwSetKeyCallback(
-                    window.handle,
-                    Some(main_context_keyboard_input as GLFWkeyfun),
-                );
-                USER_KEY_FUNC = Some(input_f);
-            } else {
-                // then we either don't want input,
-                // or we just aren't the ones handling it
-                USER_KEY_FUNC = None;
-            }
-        }
-        Ok(Self {
-            window,
-            program,
-            vao: vao.build(),
-        })
-    }
 }
