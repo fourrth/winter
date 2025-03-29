@@ -4,7 +4,7 @@ A general opengl wrapping framework
 
 ## Usage
 
-The library is currently being reworked, so tags and refs may change in the future
+The crate is currently being reworked, so tags and refs may change in the future
 
 First, clone the primary branch of the repository,
 ```
@@ -15,12 +15,25 @@ It is reccomended that you delete the remote after cloning due to frequent struc
 git remote remove origin
 ```
 
-Currently, winter is not very usable for other crates. The only supported use is to use the library through the provided examples.
-Another thing is that currently the function loader is bundled in the repo, however this may change in the future. Please refer to this readme for more deatils on building/usage.
+Currently, winter is not very usable for other crates. The only supported use is to use the crate through the provided examples.
+Another thing is that currently the function loader is bundled in the repo, however this may change in the future. Please refer to this readme for more deatils on building/usage
+
+## Features
+
+This crate uses features to switch on and off certain parts of the crate.
+The following is a comprehensive list of all the features this crate offers:
+
+### common
+
+The [common](src/common.rs) switches on various function which help with general use of the crate. These functions are not stable and are very subject to change
+
+### raw
+
+This feature simply switches everything off, other than the raw submodule of this crate
 
 ## Examples
 
-This crate uses examples to provide a good overview of what is possible with this library. This includes more complete projects, along with some examples for starting projects
+This crate uses examples to provide a good overview of what is possible with this crate. This includes more complete projects, along with some examples for starting projects
 
 Examples may be ran in the usual way by running:
 ```
@@ -38,7 +51,7 @@ Here are some quick notes and features:
  - *KEY_ESCAPE* closes the window
  - *KEY_ENTER* starts the game
  - *KEY_W*, *KEY_A*, *KEY_S*, *KEY_D* (along with the arrow keys) move the snake around
- - Allows you to run into your self if you go in the opposite direction you currently going
+ - ~~Allows you to run into your self if you go in the opposite direction you currently going~~. I actually ran into this on accident, so I actually bothered to fix this one
  - Infinite bounds, so no running into walls
  - Secret debug action if you find the key to do it
 

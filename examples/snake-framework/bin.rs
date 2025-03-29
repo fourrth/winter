@@ -3,7 +3,7 @@ use std::{
     io::{self, BufWriter, Write},
     num::NonZeroU32,
     sync::{
-        atomic::{AtomicBool, AtomicU64, Ordering},
+        atomic::{AtomicBool, AtomicI32, AtomicU64, Ordering},
         Arc, Mutex,
     },
     thread,
@@ -22,6 +22,14 @@ fn clamp_pos(num: f32) -> f32 {
     } else {
         num
     }
+}
+
+fn new_snake(width: u64, height: u64) -> snake::Context {
+    snake::Builder::create()
+        .add(snake::BuildOptions::ArenaDim(width, height))
+        .add(snake::BuildOptions::StartingHeadCoord(Coordinate((6, 6))))
+        .add(snake::BuildOptions::StartingMoveDir(Direction::Right))
+        .build()
 }
 
 fn main() {
@@ -59,15 +67,20 @@ fn main() {
         title,
         vertex_shader_text,
         fragment_shader_text,
-        Some(|window, key, _, action, _| unsafe {
+        Some(|window, key, _, action, _| {
             if action == glfw::ffi::PRESS {
                 if key == glfw::ffi::KEY_ESCAPE {
-                    glfw::ffi::glfwSetWindowShouldClose(window, glfw::ffi::TRUE);
+                    unsafe {
+                        glfw::ffi::glfwSetWindowShouldClose(window, glfw::ffi::TRUE);
+                    }
                 } else if key == glfw::ffi::KEY_SPACE {
                     DEBUG_ADD_FOOD_PRESS.store(true, Ordering::Relaxed);
                 } else if key == glfw::ffi::KEY_ENTER {
                     // toggle ticking the snake
                     SHOULD_TICK.fetch_xor(true, Ordering::Relaxed);
+                    if SHOULD_TICK.load(Ordering::Relaxed) & SHOULD_DIE.load(Ordering::Relaxed) {
+                        SHOULD_RESTART.store(true, Ordering::Relaxed);
+                    }
                 } else if key == glfw::ffi::KEY_UP || key == glfw::ffi::KEY_W {
                     GO_UP_PRESS.store(true, Ordering::Relaxed);
                 } else if key == glfw::ffi::KEY_LEFT || key == glfw::ffi::KEY_A {
@@ -99,6 +112,7 @@ fn main() {
     static SHOULD_CLOSE: AtomicBool = AtomicBool::new(false);
     static SHOULD_TICK: AtomicBool = AtomicBool::new(false);
     static SHOULD_DIE: AtomicBool = AtomicBool::new(false);
+    static SHOULD_RESTART: AtomicBool = AtomicBool::new(false);
 
     static TICKS_PER_SECOND: AtomicU64 = AtomicU64::new(10);
 
@@ -112,83 +126,74 @@ fn main() {
     static GO_RIGHT_PRESS: AtomicBool = AtomicBool::new(false);
     static GO_RIGHT_RELEASE: AtomicBool = AtomicBool::new(false);
 
+    static GO_KEY_1: AtomicI32 = AtomicI32::new(0);
+    static GO_KEY_2: AtomicI32 = AtomicI32::new(0);
+
     static DEBUG_ADD_FOOD_PRESS: AtomicBool = AtomicBool::new(false);
     static DEBUG_ADD_FOOD_RELEASE: AtomicBool = AtomicBool::new(false);
 
-    let snake_context = Arc::new(Mutex::new(
-        snake::Builder::create()
-            .add(snake::BuildOptions::ArenaDim(
-                ARENA_CELL_LENGTH as u64,
-                ARENA_CELL_LENGTH as u64,
-            ))
-            .add(snake::BuildOptions::StartingHeadCoord(Coordinate((6, 6))))
-            .add(snake::BuildOptions::StartingMoveDir(Direction::Right))
-            .build(),
-    ));
+    let snake_context = Arc::new(Mutex::new(new_snake(
+        ARENA_CELL_LENGTH as u64,
+        ARENA_CELL_LENGTH as u64,
+    )));
 
     context.program.enable();
     context.vao.bind();
 
     let snake_context_1 = Arc::clone(&snake_context);
+
     let tick_th = thread::spawn(move || {
         let mut start = Instant::now();
         while SHOULD_CLOSE.load(Ordering::Relaxed) == false {
             if let Ok(mut cxt) = snake_context_1.lock() {
-                if DEBUG_ADD_FOOD_PRESS.load(Ordering::Relaxed) {
-                    cxt.add_part = true;
-                    if DEBUG_ADD_FOOD_RELEASE.load(Ordering::Relaxed) {
-                        DEBUG_ADD_FOOD_PRESS.store(false, Ordering::Relaxed);
-                        DEBUG_ADD_FOOD_RELEASE.store(false, Ordering::Relaxed);
-                    }
+                if SHOULD_RESTART.load(Ordering::Relaxed) == true {
+                    *cxt = new_snake(ARENA_CELL_LENGTH as u64, ARENA_CELL_LENGTH as u64);
+                    SHOULD_RESTART.store(false, Ordering::Relaxed);
                 }
+
                 if SHOULD_TICK.load(Ordering::Relaxed) {
+                    if DEBUG_ADD_FOOD_PRESS.load(Ordering::Relaxed) {
+                        cxt.add_part = true;
+                        if DEBUG_ADD_FOOD_RELEASE.load(Ordering::Relaxed) {
+                            DEBUG_ADD_FOOD_PRESS.store(false, Ordering::Relaxed);
+                            DEBUG_ADD_FOOD_RELEASE.store(false, Ordering::Relaxed);
+                        }
+                    }
                     match cxt.tick() {
-                        snake::GameState::Paused => todo!(),
-                        snake::GameState::Running => (),
-                        snake::GameState::Stopped => {
-                            // for now we just ignore
+                        snake::GameState::Running => {
+                            SHOULD_DIE.store(false, Ordering::Relaxed);
                         }
                         snake::GameState::Dead => {
                             // do death screen
                             SHOULD_DIE.store(true, Ordering::Relaxed);
+                            SHOULD_TICK.store(false, Ordering::Relaxed);
                         }
                     };
                 }
-                // now do movement changes
-                // we will just be simple and
-                // do it in the order of wasd
-                // who cares...
-                let dir = if GO_UP_PRESS.load(Ordering::Relaxed) {
-                    Direction::Up as u8 + 1
-                } else if GO_LEFT_PRESS.load(Ordering::Relaxed) {
-                    Direction::Left as u8 + 1
-                } else if GO_DOWN_PRESS.load(Ordering::Relaxed) {
-                    Direction::Down as u8 + 1
-                } else if GO_RIGHT_PRESS.load(Ordering::Relaxed) {
-                    Direction::Right as u8 + 1
-                } else {
-                    0
+
+                let dir = match GO_KEY_1.load(Ordering::Relaxed) {
+                    glfw::ffi::KEY_UP | glfw::ffi::KEY_W => Direction::Up as u8 + 1,
+                    glfw::ffi::KEY_LEFT | glfw::ffi::KEY_A => Direction::Left as u8 + 1,
+                    glfw::ffi::KEY_DOWN | glfw::ffi::KEY_S => Direction::Down as u8 + 1,
+                    glfw::ffi::KEY_RIGHT | glfw::ffi::KEY_D => Direction::Right as u8 + 1,
+                    _ => 0,
                 };
                 if dir != 0 {
-                    cxt.move_dir = Direction::try_from(dir - 1).unwrap();
-                }
-                // now check if we just did a quick move
-                // basically we could press and unpress before
-                // we have a chance to process the inital press,
-                // so we have to use two variables
-                if GO_UP_RELEASE.load(Ordering::Relaxed) {
-                    GO_UP_PRESS.store(false, Ordering::Relaxed);
-                }
-                if GO_LEFT_RELEASE.load(Ordering::Relaxed) {
-                    GO_LEFT_PRESS.store(false, Ordering::Relaxed);
-                }
-                if GO_DOWN_RELEASE.load(Ordering::Relaxed) {
-                    GO_DOWN_PRESS.store(false, Ordering::Relaxed);
-                }
-                if GO_RIGHT_RELEASE.load(Ordering::Relaxed) {
-                    GO_RIGHT_PRESS.store(false, Ordering::Relaxed);
+                    let want_move = Direction::try_from(dir - 1).unwrap();
+                    if cxt.move_dir
+                        != match want_move {
+                            Direction::Left => Direction::Right,
+                            Direction::Right => Direction::Left,
+                            Direction::Up => Direction::Down,
+                            Direction::Down => Direction::Up,
+                        }
+                    {
+                        cxt.move_dir = want_move;
+                    }
+                    GO_KEY_1.swap(GO_KEY_2.load(Ordering::SeqCst), Ordering::SeqCst);
                 }
             }
+
             let target = 1f32 / (TICKS_PER_SECOND.load(Ordering::Relaxed) as f32);
             let sleep_time = clamp_pos(target - start.elapsed().as_secs_f32());
             thread::sleep(Duration::from_secs_f32(sleep_time));
@@ -208,9 +213,11 @@ fn main() {
         let mut score: u64 = 0;
 
         while context.window.should_close() == false {
-            if SHOULD_DIE.load(Ordering::Relaxed) == false {
+            if !(SHOULD_DIE.load(Ordering::Relaxed) | SHOULD_RESTART.load(Ordering::Relaxed)) {
                 gl::ClearColor(0.8, 0.7, 0.7, 1.0);
                 gl::Clear(gl::COLOR_BUFFER_BIT);
+
+                context.vao.bind();
 
                 context.vao.indices.bind();
 
@@ -263,6 +270,7 @@ fn main() {
                 move_dir,
                 score
             );
+
             let _ = writer.flush();
             start = Instant::now();
         }

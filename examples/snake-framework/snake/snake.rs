@@ -12,10 +12,10 @@ pub enum Direction {
 impl std::fmt::Display for Direction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Direction::Up => write!(f, "up")?,
-            Direction::Down => write!(f, "down")?,
             Direction::Left => write!(f, "left")?,
             Direction::Right => write!(f, "right")?,
+            Direction::Up => write!(f, "up")?,
+            Direction::Down => write!(f, "down")?,
         }
         Ok(())
     }
@@ -39,8 +39,6 @@ impl TryFrom<u8> for Direction {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GameState {
     Running,
-    Paused,
-    Stopped,
     Dead,
 }
 
