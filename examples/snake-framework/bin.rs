@@ -33,8 +33,31 @@ fn new_snake(width: u64, height: u64) -> snake::Context {
 }
 
 fn main() {
-    let width = 1000;
-    let height = 1000;
+    let args: Vec<_> = std::env::args().skip(1).collect();
+
+    let width = if let Some(width_) = args.get(0) {
+        if let Ok(width_) = width_.parse::<i32>() {
+            width_
+        } else {
+            println!("Inputted Width Unknown: using 1000");
+            1000
+        }
+    } else {
+        println!("Inputted Width Unknown: using 1000");
+        1000
+    };
+
+    let height = if let Some(height_) = args.get(1) {
+        if let Ok(height_) = height_.parse::<i32>() {
+            height_
+        } else {
+            println!("Inputted height Unknown: using 1000");
+            1000
+        }
+    } else {
+        println!("Inputted height Unknown: using 1000");
+        1000
+    };
 
     let title = CString::new("Snake Game!").unwrap();
 
