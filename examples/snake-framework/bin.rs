@@ -3,16 +3,16 @@ use std::{
     io::{self, BufWriter, Write},
     num::NonZeroU32,
     sync::{
-        atomic::{AtomicBool, AtomicI32, AtomicU64, Ordering},
+        atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering},
         Arc, Mutex,
     },
     thread,
     time::{Duration, Instant},
 };
 
-use glad_gles2::gl;
 use glmath::vector::Vector2;
 use snake::{Coordinate, Direction};
+use winter::bindings;
 use winter::{common, primitives};
 
 #[inline(always)]
@@ -82,26 +82,17 @@ fn main() {
                         SHOULD_RESTART.store(true, Ordering::Relaxed);
                     }
                 } else if key == glfw::ffi::KEY_UP || key == glfw::ffi::KEY_W {
-                    GO_UP_PRESS.store(true, Ordering::Relaxed);
+                    let _ = PRESS_KEY.fetch_or(1, Ordering::Relaxed);
                 } else if key == glfw::ffi::KEY_LEFT || key == glfw::ffi::KEY_A {
-                    GO_LEFT_PRESS.store(true, Ordering::Relaxed);
+                    let _ = PRESS_KEY.fetch_or(2, Ordering::Relaxed);
                 } else if key == glfw::ffi::KEY_DOWN || key == glfw::ffi::KEY_S {
-                    GO_DOWN_PRESS.store(true, Ordering::Relaxed);
+                    let _ = PRESS_KEY.fetch_or(4, Ordering::Relaxed);
                 } else if key == glfw::ffi::KEY_RIGHT || key == glfw::ffi::KEY_D {
-                    GO_RIGHT_PRESS.store(true, Ordering::Relaxed);
+                    let _ = PRESS_KEY.fetch_or(8, Ordering::Relaxed);
                 }
             } else if action == glfw::ffi::RELEASE {
                 if key == glfw::ffi::KEY_SPACE {
                     DEBUG_ADD_FOOD_RELEASE.store(true, Ordering::Relaxed);
-                }
-                if key == glfw::ffi::KEY_UP || key == glfw::ffi::KEY_W {
-                    GO_UP_RELEASE.store(true, Ordering::Relaxed);
-                } else if key == glfw::ffi::KEY_LEFT || key == glfw::ffi::KEY_A {
-                    GO_LEFT_RELEASE.store(true, Ordering::Relaxed);
-                } else if key == glfw::ffi::KEY_DOWN || key == glfw::ffi::KEY_S {
-                    GO_DOWN_RELEASE.store(true, Ordering::Relaxed);
-                } else if key == glfw::ffi::KEY_RIGHT || key == glfw::ffi::KEY_D {
-                    GO_RIGHT_RELEASE.store(true, Ordering::Relaxed);
                 }
             }
         }),
@@ -116,18 +107,7 @@ fn main() {
 
     static TICKS_PER_SECOND: AtomicU64 = AtomicU64::new(10);
 
-    // TODO: switch to using an atomic u8,u32,etc... seriously...
-    static GO_UP_PRESS: AtomicBool = AtomicBool::new(false);
-    static GO_UP_RELEASE: AtomicBool = AtomicBool::new(false);
-    static GO_LEFT_PRESS: AtomicBool = AtomicBool::new(false);
-    static GO_LEFT_RELEASE: AtomicBool = AtomicBool::new(false);
-    static GO_DOWN_PRESS: AtomicBool = AtomicBool::new(false);
-    static GO_DOWN_RELEASE: AtomicBool = AtomicBool::new(false);
-    static GO_RIGHT_PRESS: AtomicBool = AtomicBool::new(false);
-    static GO_RIGHT_RELEASE: AtomicBool = AtomicBool::new(false);
-
-    static GO_KEY_1: AtomicI32 = AtomicI32::new(0);
-    static GO_KEY_2: AtomicI32 = AtomicI32::new(0);
+    static PRESS_KEY: AtomicU8 = AtomicU8::new(0);
 
     static DEBUG_ADD_FOOD_PRESS: AtomicBool = AtomicBool::new(false);
     static DEBUG_ADD_FOOD_RELEASE: AtomicBool = AtomicBool::new(false);
@@ -154,10 +134,6 @@ fn main() {
                 if SHOULD_TICK.load(Ordering::Relaxed) {
                     if DEBUG_ADD_FOOD_PRESS.load(Ordering::Relaxed) {
                         cxt.add_part = true;
-                        if DEBUG_ADD_FOOD_RELEASE.load(Ordering::Relaxed) {
-                            DEBUG_ADD_FOOD_PRESS.store(false, Ordering::Relaxed);
-                            DEBUG_ADD_FOOD_RELEASE.store(false, Ordering::Relaxed);
-                        }
                     }
                     match cxt.tick() {
                         snake::GameState::Running => {
@@ -169,28 +145,47 @@ fn main() {
                             SHOULD_TICK.store(false, Ordering::Relaxed);
                         }
                     };
+                    if DEBUG_ADD_FOOD_RELEASE.load(Ordering::Relaxed) {
+                        cxt.add_part = false;
+                        DEBUG_ADD_FOOD_PRESS.store(false, Ordering::Relaxed)
+                    }
                 }
 
-                let dir = match GO_KEY_1.load(Ordering::Relaxed) {
-                    glfw::ffi::KEY_UP | glfw::ffi::KEY_W => Direction::Up as u8 + 1,
-                    glfw::ffi::KEY_LEFT | glfw::ffi::KEY_A => Direction::Left as u8 + 1,
-                    glfw::ffi::KEY_DOWN | glfw::ffi::KEY_S => Direction::Down as u8 + 1,
-                    glfw::ffi::KEY_RIGHT | glfw::ffi::KEY_D => Direction::Right as u8 + 1,
-                    _ => 0,
-                };
-                if dir != 0 {
-                    let want_move = Direction::try_from(dir - 1).unwrap();
-                    if cxt.move_dir
-                        != match want_move {
-                            Direction::Left => Direction::Right,
-                            Direction::Right => Direction::Left,
-                            Direction::Up => Direction::Down,
-                            Direction::Down => Direction::Up,
+                let press = PRESS_KEY.load(Ordering::Relaxed);
+                let mut release = 0;
+                // w,a,s,d
+                // 1,2,4,8
+                if press != 0 {
+                    for (mask, key) in [1u8, 2, 4, 8].into_iter().zip([1u8, 2, 3, 4].into_iter()) {
+                        let dir = {
+                            let zero_or_one: u8 =
+                                (press & mask) >> (key.checked_sub(1).unwrap_or(0));
+                            // 255 is not a valid dir, so gives Err(_)
+                            Direction::try_from((key * zero_or_one).wrapping_sub(1))
+                        };
+
+                        if let Ok(val) = dir {
+                            if cxt.move_dir
+                                != match val {
+                                    Direction::Left => Direction::Right,
+                                    Direction::Right => Direction::Left,
+                                    Direction::Up => Direction::Down,
+                                    Direction::Down => Direction::Up,
+                                }
+                            {
+                                cxt.move_dir = val;
+                                release |= mask;
+                                // we did our thing, so now push to the atomic
+                                PRESS_KEY.fetch_xor(release, Ordering::Relaxed);
+                                break;
+                            } else {
+                                // so we tried to go in the opposite direction,
+                                // so remove that and continue to the next press
+                                release |= mask;
+                                continue;
+                            }
                         }
-                    {
-                        cxt.move_dir = want_move;
                     }
-                    GO_KEY_1.swap(GO_KEY_2.load(Ordering::SeqCst), Ordering::SeqCst);
                 }
             }
 
@@ -214,8 +209,8 @@ fn main() {
 
         while context.window.should_close() == false {
             if !(SHOULD_DIE.load(Ordering::Relaxed) | SHOULD_RESTART.load(Ordering::Relaxed)) {
-                gl::ClearColor(0.8, 0.7, 0.7, 1.0);
-                gl::Clear(gl::COLOR_BUFFER_BIT);
+                bindings::ClearColor(0.8, 0.7, 0.7, 1.0);
+                bindings::Clear(bindings::COLOR_BUFFER_BIT);
 
                 context.vao.bind();
 
@@ -246,9 +241,9 @@ fn main() {
                 // otherwise, do our death screen
                 // we do this by unbinding the vao
                 // and just changing the clearcolor
-                gl::ClearColor(1.0, 0.0, 0.0, 1.0);
-                gl::Clear(gl::COLOR_BUFFER_BIT);
-                gl::BindVertexArray(0)
+                bindings::ClearColor(1.0, 0.0, 0.0, 1.0);
+                bindings::Clear(bindings::COLOR_BUFFER_BIT);
+                bindings::BindVertexArray(0)
             }
 
             glfw::ffi::glfwGetFramebufferSize(
@@ -264,7 +259,7 @@ fn main() {
 
             let _ = write!(
                 writer,
-                "FPS: {:.2}, TICKS/SECOND: {}, MOVE_DIRECTION: {}, SCORE: {}--------------\r",
+                "FPS: {:.2}, TICKS/SECOND: {}, MOVE_DIRECTION: {}, SCORE: {} --------------\r",
                 fps,
                 TICKS_PER_SECOND.load(Ordering::Relaxed),
                 move_dir,

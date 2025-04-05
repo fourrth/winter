@@ -9,8 +9,8 @@ use std::{
 };
 
 use game_of_life::Context;
-use glad_gles2::gl;
 use glmath::{vector::Vector2, Element};
+use winter::bindings;
 use winter::{common, primitives};
 
 const SAVE_FILE_OUTPUT_DIR: &str = "./target/save_data.txt";
@@ -317,8 +317,8 @@ fn main() -> Result<(), String> {
 
         let mut generation_count = 0;
         while context.window.should_close() == false {
-            gl::ClearColor(0.8, 0.7, 0.7, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+            bindings::ClearColor(0.8, 0.7, 0.7, 1.0);
+            bindings::Clear(bindings::COLOR_BUFFER_BIT);
 
             context.vao.indices.bind();
             if let Some(cxt) = &mut GOL_CXT {

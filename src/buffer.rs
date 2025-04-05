@@ -1,4 +1,4 @@
-use glad_gles2::gl;
+use crate::bindings;
 use std::{ffi::c_void, num::NonZeroU32, ptr};
 
 use crate::raw::buffers::{self, BufferTarget};
@@ -12,9 +12,9 @@ pub enum GLType {
 impl GLType {
     pub fn get_glenum(self) -> u32 {
         match self {
-            GLType::Float => gl::FLOAT,
-            GLType::Int => gl::INT,
-            GLType::UInt => gl::UNSIGNED_INT,
+            GLType::Float => bindings::FLOAT,
+            GLType::Int => bindings::INT,
+            GLType::UInt => bindings::UNSIGNED_INT,
         }
     }
     pub fn get_size(self) -> i32 {
@@ -61,7 +61,7 @@ impl Layout {
         attrib_type: GLType,
     ) -> Result<Self, String> {
         let attrib_location =
-            match unsafe { gl::GetAttribLocation(program.id, attrib_name.as_ptr()) } {
+            match unsafe { bindings::GetAttribLocation(program.id, attrib_name.as_ptr()) } {
                 -1 => {
                     return Err(format!(
                         "Could not find attrib of name: {}",
@@ -104,7 +104,7 @@ impl Buffer {
     }
     pub fn bind(&self, target: BufferTarget) {
         if let Some(id) = self.id {
-            unsafe { gl::BindBuffer(target.get_glenum(), id.into()) };
+            unsafe { bindings::BindBuffer(target.get_glenum(), id.into()) };
         } else {
             println!("Tried to bind before creating buffer: silently failing");
         }
@@ -173,15 +173,15 @@ impl VertexBuffer {
         unsafe {
             // now bind it to the current vao
             self.buffer.bind(target);
-            gl::VertexAttribPointer(
+            bindings::VertexAttribPointer(
                 self.layout.attrib_loc,
                 self.layout.attrib_len,
                 self.layout.attrib_type.get_glenum(),
-                gl::FALSE,
+                bindings::FALSE,
                 0, /* self.layout.attrib_len as i32 * self.layout.attrib_type.get_size() */
                 ptr::null_mut::<c_void>(),
             );
-            gl::EnableVertexAttribArray(self.layout.attrib_loc);
+            bindings::EnableVertexAttribArray(self.layout.attrib_loc);
         }
     }
 }

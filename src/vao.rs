@@ -1,12 +1,12 @@
 use std::ffi;
 
+use crate::bindings;
 use crate::{
     buffer::{GLType, IndexBuffer, Layout, VertexBuffer},
     primitives,
     raw::buffers::{self, BufferTarget},
     Float,
 };
-use glad_gles2::gl;
 use glmath::vector::Vector3;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -45,13 +45,13 @@ pub struct VertexArrayObject {
 
 impl VertexArrayObject {
     pub fn bind(&self) {
-        unsafe { gl::BindVertexArray(self.id) };
+        unsafe { bindings::BindVertexArray(self.id) };
     }
     pub fn draw(&self) {
         self.indices.bind();
         unsafe {
-            gl::DrawElements(
-                gl::TRIANGLES,
+            bindings::DrawElements(
+                bindings::TRIANGLES,
                 self.indices.len as i32,
                 self.indices.ty.get_glenum(),
                 std::ptr::null(),
@@ -109,11 +109,11 @@ impl VertexArrayObject {
         // but in the future we can use glBufferSubData
         // and just update what we have to
         unsafe {
-            gl::BufferData(
-                gl::ARRAY_BUFFER,
+            bindings::BufferData(
+                bindings::ARRAY_BUFFER,
                 self.position.buffer.data.len() as isize,
                 self.position.buffer.data.as_ptr() as *const ffi::c_void,
-                gl::STATIC_DRAW,
+                bindings::STATIC_DRAW,
             );
         }
     }
@@ -128,11 +128,11 @@ impl VertexArrayObject {
         // right now we just set the entire data again because
         // I want to make sure that this actually works
         unsafe {
-            gl::BufferData(
-                gl::ARRAY_BUFFER,
+            bindings::BufferData(
+                bindings::ARRAY_BUFFER,
                 self.color.buffer.data.len() as isize,
                 self.color.buffer.data.as_ptr() as *const ffi::c_void,
-                gl::STATIC_DRAW,
+                bindings::STATIC_DRAW,
             );
         }
     }
@@ -177,8 +177,8 @@ impl VertexArrayObjectBuilder {
 
         let id = unsafe {
             let mut id: u32 = 0;
-            gl::GenVertexArrays(1, &mut id);
-            gl::BindVertexArray(id);
+            bindings::GenVertexArrays(1, &mut id);
+            bindings::BindVertexArray(id);
             id
         };
 

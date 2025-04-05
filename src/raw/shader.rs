@@ -1,7 +1,9 @@
 use std::{mem::MaybeUninit, ptr};
 
-use glad_gles2::gl::{self, GLchar, GLenum, GLint, GLsizei, GLuint};
-
+use crate::bindings::{
+    self,
+    types::{GLchar, GLenum, GLint, GLsizei, GLuint},
+};
 #[allow(invalid_value)]
 fn Message_Error_Helper(
     id: GLuint,
@@ -11,7 +13,7 @@ fn Message_Error_Helper(
     unsafe {
         let mut length = MaybeUninit::uninit().assume_init();
 
-        GetWhativ(id, gl::INFO_LOG_LENGTH, &mut length);
+        GetWhativ(id, bindings::INFO_LOG_LENGTH, &mut length);
 
         // length cannot be -1 because we have an info log
         // if we didn't then it would be -1
@@ -32,24 +34,25 @@ pub unsafe fn CreateShader(
     source_len: GLint,
 ) -> Result<GLuint, String> {
     unsafe {
-        let id: GLuint = gl::CreateShader(SHADERTYPE);
-        gl::ShaderSource(id, 1, &source, &source_len);
-        gl::CompileShader(id);
+        let id: GLuint = bindings::CreateShader(SHADERTYPE);
+        bindings::ShaderSource(id, 1, &source, &source_len);
+        bindings::CompileShader(id);
 
         #[cfg(debug_assertions)]
         {
             let mut result: GLint = MaybeUninit::uninit().assume_init();
-            gl::GetShaderiv(id, gl::COMPILE_STATUS, &mut result as *mut GLint);
+            bindings::GetShaderiv(id, bindings::COMPILE_STATUS, &mut result as *mut GLint);
 
             if result == 0 {
-                let msg_str = Message_Error_Helper(id, gl::GetShaderiv, gl::GetShaderInfoLog);
+                let msg_str =
+                    Message_Error_Helper(id, bindings::GetShaderiv, bindings::GetShaderInfoLog);
 
                 DeleteShader(id);
                 match SHADERTYPE {
-                    gl::FRAGMENT_SHADER => {
+                    bindings::FRAGMENT_SHADER => {
                         return Err(format!("Error in Fragment Shader; {}\n", msg_str));
                     }
-                    gl::VERTEX_SHADER => {
+                    bindings::VERTEX_SHADER => {
                         return Err(format!("Error in Vertex Shader; {}\n", msg_str))
                     }
                     _ => {
@@ -64,7 +67,7 @@ pub unsafe fn CreateShader(
 
 #[inline]
 pub unsafe fn DeleteShader(id: GLuint) {
-    gl::DeleteShader(id);
+    bindings::DeleteShader(id);
 }
 
 #[inline]
@@ -76,7 +79,7 @@ pub unsafe fn CreateProgram(
 ) -> Result<GLuint, String> {
     unsafe {
         let vertex_shader = match CreateShader(
-            gl::VERTEX_SHADER,
+            bindings::VERTEX_SHADER,
             vertex_shader_text,
             vertex_shader_text_len,
         ) {
@@ -85,7 +88,7 @@ pub unsafe fn CreateProgram(
         };
 
         let fragment_shader = match CreateShader(
-            gl::FRAGMENT_SHADER,
+            bindings::FRAGMENT_SHADER,
             fragment_shader_text,
             fragment_shader_text_len,
         ) {
@@ -93,38 +96,48 @@ pub unsafe fn CreateProgram(
             E => return E,
         };
 
-        let program: GLuint = match gl::CreateProgram() {
+        let program: GLuint = match bindings::CreateProgram() {
             0 => {
                 return Err(String::from("Could Not Create Program"));
             }
             val => val,
         };
 
-        gl::AttachShader(program, vertex_shader);
-        gl::AttachShader(program, fragment_shader);
+        bindings::AttachShader(program, vertex_shader);
+        bindings::AttachShader(program, fragment_shader);
 
-        gl::LinkProgram(program);
+        bindings::LinkProgram(program);
 
         #[cfg(debug_assertions)]
         {
             let mut result: GLint = 0;
 
-            gl::GetProgramiv(program, gl::LINK_STATUS, &mut result as *mut GLint);
+            bindings::GetProgramiv(program, bindings::LINK_STATUS, &mut result as *mut GLint);
 
             if result == 0 {
                 // if we did not link correctly
 
-                let msg_str =
-                    Message_Error_Helper(program, gl::GetProgramiv, gl::GetProgramInfoLog);
+                let msg_str = Message_Error_Helper(
+                    program,
+                    bindings::GetProgramiv,
+                    bindings::GetProgramInfoLog,
+                );
 
                 return Err(format!("Error Linking Program; {}", msg_str));
             }
 
-            gl::ValidateProgram(program);
-            gl::GetProgramiv(program, gl::VALIDATE_STATUS, &mut result as *mut GLint);
+            bindings::ValidateProgram(program);
+            bindings::GetProgramiv(
+                program,
+                bindings::VALIDATE_STATUS,
+                &mut result as *mut GLint,
+            );
             if result == 0 {
-                let msg_str =
-                    Message_Error_Helper(program, gl::GetProgramiv, gl::GetProgramInfoLog);
+                let msg_str = Message_Error_Helper(
+                    program,
+                    bindings::GetProgramiv,
+                    bindings::GetProgramInfoLog,
+                );
 
                 return Err(format!("Error Validating Program; {}", msg_str));
             }
@@ -139,5 +152,5 @@ pub unsafe fn CreateProgram(
 
 #[inline]
 pub unsafe fn DeleteProgram(id: GLuint) {
-    gl::DeleteProgram(id);
+    bindings::DeleteProgram(id);
 }

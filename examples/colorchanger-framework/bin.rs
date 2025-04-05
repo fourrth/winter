@@ -1,6 +1,6 @@
-use glad_gles2::gl;
 use glmath::vector::Vector2;
 use std::{ffi::CString, num::NonZeroU32, time::Instant};
+use winter::bindings;
 use winter::{common, primitives};
 
 fn main() -> Result<(), String> {
@@ -57,11 +57,11 @@ fn main() -> Result<(), String> {
         context.vao.bind();
         let time_start = Instant::now();
         while context.window.should_close() == false {
-            gl::ClearColor(0.8, 0.7, 0.7, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+            bindings::ClearColor(0.8, 0.7, 0.7, 1.0);
+            bindings::Clear(bindings::COLOR_BUFFER_BIT);
 
             context.vao.draw();
-            gl::Uniform1f(2, time_start.elapsed().as_secs_f32());
+            bindings::Uniform1f(2, time_start.elapsed().as_secs_f32());
 
             glfw::ffi::glfwGetFramebufferSize(
                 context.window.handle,

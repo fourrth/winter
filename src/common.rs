@@ -2,8 +2,8 @@
 
 use std::num::NonZeroU32;
 
+use crate::bindings;
 use bytemuck::Contiguous;
-use glad_gles2::gl;
 use glmath::vector::{Vector2, Vector3};
 
 use crate::{primitives, vao::VertexArrayObjectBuilder, Float};
@@ -93,8 +93,8 @@ pub fn convert_comp_triangle(data: &mut [u8]) -> &mut [Vector3<Float>; 3] {
 pub fn roll_gl_errors() {
     unsafe {
         loop {
-            let error = gl::GetError();
-            if error != gl::NO_ERROR {
+            let error = bindings::GetError();
+            if error != bindings::NO_ERROR {
                 println!("OpenGL error: {}", error);
                 panic!("HIT GL ERROR!!!");
                 // Handle or log the error as needed

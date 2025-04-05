@@ -1,7 +1,10 @@
-use glad_gles2::gl::{self, GLfloat, GLint, GLuint};
 use glfw::ffi::GLFWwindow;
 use lazy_static::lazy_static;
 use std::{collections::HashMap, ffi::c_void};
+use winter::bindings::{
+    self,
+    types::{GLfloat, GLint, GLuint},
+};
 use winter::raw::buffers::BufferTarget;
 
 fn proc_loader(str: &'static str) -> *const c_void {
@@ -118,7 +121,7 @@ impl SimpleStruct {
             glfw::ffi::glfwMakeContextCurrent(window);
             // glfw::ffi::glfwSetFramebufferSizeCallback(window, cbfun);
 
-            gl::load(proc_loader);
+            bindings::load_with(proc_loader);
             self.window = Some(window);
             Ok(())
         }
@@ -171,41 +174,41 @@ fn main() -> Result<(), String> {
         )
         .unwrap();
 
-        gl::BindBuffer(gl::ARRAY_BUFFER, vb);
+        bindings::BindBuffer(bindings::ARRAY_BUFFER, vb);
 
-        gl::VertexAttribPointer(
+        bindings::VertexAttribPointer(
             0,
             3,
-            gl::FLOAT,
-            gl::FALSE,
+            bindings::FLOAT,
+            bindings::FALSE,
             3 * std::mem::size_of::<GLfloat>() as GLint,
             std::ptr::null(),
         );
-        gl::EnableVertexAttribArray(0);
+        bindings::EnableVertexAttribArray(0);
 
-        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ib);
+        bindings::BindBuffer(bindings::ELEMENT_ARRAY_BUFFER, ib);
 
-        gl::UseProgram(program);
-        gl::BindVertexArray(vao);
+        bindings::UseProgram(program);
+        bindings::BindVertexArray(vao);
 
         while glfw::ffi::glfwWindowShouldClose(ss.window.unwrap()) == 0 {
-            gl::ClearColor(0.8, 0.7, 0.7, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+            bindings::ClearColor(0.8, 0.7, 0.7, 1.0);
+            bindings::Clear(bindings::COLOR_BUFFER_BIT);
 
-            gl::DrawElements(
-                gl::TRIANGLES,
+            bindings::DrawElements(
+                bindings::TRIANGLES,
                 ss.indices.len() as GLint,
-                gl::UNSIGNED_INT,
+                bindings::UNSIGNED_INT,
                 std::ptr::null(),
             );
 
             glfw::ffi::glfwSwapBuffers(ss.window.unwrap());
             glfw::ffi::glfwPollEvents();
         }
-        gl::DeleteVertexArrays(1, &vao);
-        gl::DeleteBuffers(1, &vb);
-        gl::DeleteBuffers(1, &ib);
-        gl::DeleteProgram(program);
+        bindings::DeleteVertexArrays(1, &vao);
+        bindings::DeleteBuffers(1, &vb);
+        bindings::DeleteBuffers(1, &ib);
+        bindings::DeleteProgram(program);
 
         glfw::ffi::glfwTerminate();
     }

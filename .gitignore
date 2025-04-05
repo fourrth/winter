@@ -4,8 +4,7 @@
 
 !Cargo.toml
 
-!glad-gles2
-!glad-gles2/**
+!build.rs
 
 !examples
 !examples/**

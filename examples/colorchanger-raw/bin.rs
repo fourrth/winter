@@ -1,11 +1,16 @@
 #![allow(non_snake_case)]
 
-use glad_gles2::gl::{self, GLfloat, GLint, GLuint};
 use glfw::ffi::GLFWwindow;
 use once_cell::sync::Lazy;
 use rand::Rng;
 use std::{collections::HashMap, env::args, ffi::c_void, time::Instant};
-use winter::raw::buffers::BufferTarget;
+use winter::{
+    bindings::{
+        self,
+        types::{GLfloat, GLint, GLuint},
+    },
+    raw::buffers::BufferTarget,
+};
 
 fn proc_loader(str: &'static str) -> *const c_void {
     unsafe {
@@ -112,7 +117,7 @@ impl SimpleStruct {
             glfw::ffi::glfwMakeContextCurrent(window);
             // glfw::ffi::glfwSetFramebufferSizeCallback(window, cbfun);
 
-            gl::load(proc_loader);
+            bindings::load_with(proc_loader);
             self.window = Some(window);
             Ok(())
         }
@@ -164,46 +169,46 @@ fn main() -> Result<(), String> {
         )
         .unwrap();
 
-        gl::BindBuffer(gl::ARRAY_BUFFER, vb);
+        bindings::BindBuffer(bindings::ARRAY_BUFFER, vb);
 
-        gl::VertexAttribPointer(
+        bindings::VertexAttribPointer(
             0,
             3,
-            gl::FLOAT,
-            gl::FALSE,
+            bindings::FLOAT,
+            bindings::FALSE,
             3 * std::mem::size_of::<GLfloat>() as GLint,
             std::ptr::null(),
         );
         let vertPositionL: GLint =
-            gl::GetAttribLocation(program, b"vertPosition\0".as_ptr() as *const i8);
+            bindings::GetAttribLocation(program, b"vertPosition\0".as_ptr() as *const i8);
         assert!(vertPositionL != -1);
-        gl::EnableVertexAttribArray(vertPositionL as GLuint);
+        bindings::EnableVertexAttribArray(vertPositionL as GLuint);
 
         let mut time: Instant;
-        let timeuL: GLint = gl::GetUniformLocation(program, b"timeu\0".as_ptr() as *const i8);
+        let timeuL: GLint = bindings::GetUniformLocation(program, b"timeu\0".as_ptr() as *const i8);
         if timeuL == -1 {
             return Err(String::from("Could not Get the Location of time uniform"));
         }
 
-        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ib);
-        gl::UseProgram(program);
-        gl::BindVertexArray(vao);
+        bindings::BindBuffer(bindings::ELEMENT_ARRAY_BUFFER, ib);
+        bindings::UseProgram(program);
+        bindings::BindVertexArray(vao);
         let time_start = Instant::now();
         while glfw::ffi::glfwWindowShouldClose(ss.window.unwrap()) == 0 {
             time = Instant::now();
 
-            gl::ClearColor(0.8, 0.7, 0.7, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+            bindings::ClearColor(0.8, 0.7, 0.7, 1.0);
+            bindings::Clear(bindings::COLOR_BUFFER_BIT);
 
-            gl::DrawElements(
-                gl::TRIANGLES,
+            bindings::DrawElements(
+                bindings::TRIANGLES,
                 ss.indices.len() as GLint,
-                gl::UNSIGNED_INT,
+                bindings::UNSIGNED_INT,
                 std::ptr::null(),
             );
 
             // update the uniforms
-            gl::Uniform1f(timeuL, time.duration_since(time_start).as_secs_f32());
+            bindings::Uniform1f(timeuL, time.duration_since(time_start).as_secs_f32());
 
             glfw::ffi::glfwSwapBuffers(ss.window.unwrap());
             glfw::ffi::glfwPollEvents();

@@ -1,6 +1,6 @@
 use std::ffi::CString;
 
-use glad_gles2::gl;
+use crate::bindings;
 
 use crate::raw::shader;
 
@@ -22,7 +22,7 @@ impl Program {
         }
     }
     pub fn enable(&self) {
-        unsafe { gl::UseProgram(self.id) }
+        unsafe { bindings::UseProgram(self.id) }
     }
 }
 

@@ -1,6 +1,6 @@
 use std::ffi::c_void;
 
-use glad_gles2::gl;
+use winter::bindings;
 
 fn proc_loader(str: &'static str) -> *const c_void {
     unsafe {
@@ -30,12 +30,12 @@ fn main() -> Result<(), &'static str> {
         }
 
         glfw::ffi::glfwMakeContextCurrent(window);
-        gl::load(proc_loader);
+        bindings::load_with(proc_loader);
 
         glfw::ffi::glfwSwapInterval(1);
         while glfw::ffi::glfwWindowShouldClose(window) == 0 {
-            gl::ClearColor(0.8, 0.7, 0.7, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+            bindings::ClearColor(0.8, 0.7, 0.7, 1.0);
+            bindings::Clear(bindings::COLOR_BUFFER_BIT);
 
             glfw::ffi::glfwSwapBuffers(window);
             glfw::ffi::glfwPollEvents();

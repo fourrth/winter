@@ -1,7 +1,7 @@
+use glfw::ffi::{glfwWindowShouldClose, GLFWwindow};
 use std::ffi::{c_int, c_void, CString};
 
-use glad_gles2::gl;
-use glfw::ffi::{glfwWindowShouldClose, GLFWwindow};
+use crate::bindings;
 
 pub type GlfwInputFunction =
     fn(window: *mut GLFWwindow, key: c_int, scancode: c_int, action: c_int, mods: c_int);
@@ -13,7 +13,6 @@ fn proc_loader(str: &'static str) -> *const c_void {
         glfw::ffi::glfwGetProcAddress(name.as_ptr() as *const i8)
     }
 }
-
 #[derive(Debug)]
 pub struct Window {
     pub handle: *mut GLFWwindow,
@@ -49,7 +48,7 @@ impl Window {
             glfw::ffi::glfwMakeContextCurrent(window);
             // glfw::ffi::glfwSetFramebufferSizeCallback(window, cbfun);
 
-            gl::load(proc_loader);
+            bindings::load_with(proc_loader);
             Ok(Window {
                 handle: window,
                 width,

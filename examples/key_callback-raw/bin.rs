@@ -3,8 +3,8 @@ use std::{
     sync::Mutex,
 };
 
-use glad_gles2::gl;
 use glfw::ffi::GLFWwindow;
+use winter::bindings;
 
 extern "C" fn key_callback(
     window: *mut GLFWwindow,
@@ -62,15 +62,15 @@ fn main() -> Result<(), &'static str> {
         }
 
         glfw::ffi::glfwMakeContextCurrent(window);
-        gl::load(proc_loader);
+        bindings::load_with(proc_loader);
 
         glfw::ffi::glfwSetKeyCallback(window, Some(key_callback));
 
         glfw::ffi::glfwSwapInterval(1);
         println!("Press 'ESCAPE' twice to exit");
         while glfw::ffi::glfwWindowShouldClose(window) == 0 {
-            gl::ClearColor(0.8, 0.7, 0.7, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+            bindings::ClearColor(0.8, 0.7, 0.7, 1.0);
+            bindings::Clear(bindings::COLOR_BUFFER_BIT);
 
             glfw::ffi::glfwSwapBuffers(window);
             glfw::ffi::glfwPollEvents();

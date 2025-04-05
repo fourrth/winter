@@ -3,19 +3,19 @@ use rand::Rng;
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Direction {
-    Left,
-    Right,
     Up,
+    Left,
     Down,
+    Right,
 }
 
 impl std::fmt::Display for Direction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Direction::Left => write!(f, "left")?,
-            Direction::Right => write!(f, "right")?,
             Direction::Up => write!(f, "up")?,
+            Direction::Left => write!(f, "left")?,
             Direction::Down => write!(f, "down")?,
+            Direction::Right => write!(f, "right")?,
         }
         Ok(())
     }
@@ -25,10 +25,10 @@ impl TryFrom<u8> for Direction {
     type Error = u8;
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
-            0 => Ok(Direction::Left),
-            1 => Ok(Direction::Right),
-            2 => Ok(Direction::Up),
-            3 => Ok(Direction::Down),
+            0 => Ok(Direction::Up),
+            1 => Ok(Direction::Left),
+            2 => Ok(Direction::Down),
+            3 => Ok(Direction::Right),
             val => Err(val),
         }
     }
