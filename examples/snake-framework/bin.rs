@@ -1,7 +1,6 @@
 use std::{
     ffi::CString,
     io::{self, BufWriter, Write},
-    num::NonZeroU32,
     sync::{
         atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering},
         Arc, Mutex,
@@ -12,7 +11,7 @@ use std::{
 
 use glmath::vector::Vector2;
 use snake::{Coordinate, Direction};
-use winter::{bindings, vao::VertexArrayObject};
+use winter::{bindings, vao::VertexArrayObject, NonZeroUInt};
 use winter::{common, primitives};
 
 #[inline(always)]
@@ -78,8 +77,8 @@ fn main() {
     let vao_builder = common::create_grid(
         Vector2::from([-1.; 2]).add(Vector2::from([0.1; 2])),
         Vector2::from([1.; 2]).sub(Vector2::from([0.1; 2])),
-        NonZeroU32::new(ARENA_CELL_LENGTH as u32).unwrap(),
-        NonZeroU32::new(ARENA_CELL_LENGTH as u32).unwrap(),
+        NonZeroUInt::new(ARENA_CELL_LENGTH as u32).unwrap(),
+        NonZeroUInt::new(ARENA_CELL_LENGTH as u32).unwrap(),
         0.,
         |_, _, _| color_snake_empty,
     );

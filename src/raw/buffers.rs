@@ -99,6 +99,11 @@ pub unsafe fn DeleteBuffer(id: GLuint) {
     bindings::DeleteBuffers(1, &id)
 }
 
+#[inline]
+pub unsafe fn BindBuffer(target: BufferTarget, id: GLuint) {
+    bindings::BindBuffer(target.get_glenum(), id);
+}
+
 //TODO: make better debug impl that breaks this
 //TODO: apart into the used bitfields
 #[derive(Debug, Clone, Copy)]

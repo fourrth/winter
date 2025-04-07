@@ -31,10 +31,6 @@ if you have OpenGL gl 4+
 This crate uses features to switch on and off certain parts of the crate.
 The following is a comprehensive list of all the features this crate offers:
 
-### common
-
-The [common](src/common.rs) switches on various function which help with general use of the crate. These functions are not stable and are very subject to change
-
 ### raw
 
 This feature simply switches everything off, other than the raw submodule of this crate

@@ -32,7 +32,7 @@ pub mod default {
     //! to only give the user access to creating their own
     //! OpenGL engines
 
-    use std::{marker::PhantomData, num::NonZeroU32};
+    use std::marker::PhantomData;
 
     use glmath::vector::Vector3;
 
@@ -49,14 +49,14 @@ pub mod default {
             self,
             buffers::{BufferTarget, MapAccess, MapAccessBF},
         },
-        Float,
+        Float, NonZeroUInt,
     };
 
     use super::{VertexArrayObject, VertexArrayObjectData};
 
     #[derive(Debug)]
     struct Guard {
-        inner: NonZeroU32,
+        inner: NonZeroUInt,
     }
     impl Drop for Guard {
         fn drop(&mut self) {
@@ -82,13 +82,13 @@ pub mod default {
     ///
     /// Will push changes to OpenGL when dropped
     pub struct VertexBufferUpdater<'a, V: GLVertexType> {
-        id: NonZeroU32,
+        id: NonZeroUInt,
         inner: &'a mut VertexBufferDynamicData,
         _v: PhantomData<V>,
     }
     //TODO: impl deref for this
     impl<'a, V: GLVertexType> VertexBufferUpdater<'a, V> {
-        pub fn from(data: &'a mut VertexBufferDynamicData, id: NonZeroU32) -> Self {
+        pub fn from(data: &'a mut VertexBufferDynamicData, id: NonZeroUInt) -> Self {
             Self {
                 id,
                 inner: data,
@@ -274,7 +274,7 @@ pub mod default {
 
             let vao: Vao<P, I, C> = Vao {
                 id: Guard {
-                    inner: NonZeroU32::new(id).unwrap(),
+                    inner: NonZeroUInt::new(id).unwrap(),
                 },
                 position_vb,
                 color_vb,

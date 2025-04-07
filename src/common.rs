@@ -2,9 +2,7 @@
 //!
 //! This module is very unstable and very subject to change
 
-use std::num::NonZeroU32;
-
-use crate::{bindings, vao::default};
+use crate::{bindings, vao::default, NonZeroUInt};
 use bytemuck::Contiguous;
 use glmath::vector::{Vector2, Vector3};
 
@@ -37,8 +35,8 @@ pub fn create_rectangle(
 pub fn create_grid<F: Fn(u32, u32, u32) -> primitives::Color>(
     pos_bottom_left: Vector2<Float>,
     pos_top_right: Vector2<Float>,
-    grid_width: NonZeroU32,
-    grid_height: NonZeroU32,
+    grid_width: NonZeroUInt,
+    grid_height: NonZeroUInt,
     inner_margin: Float,
     // color_function: fn(x_index: u32, y_index: u32, cnt: u32) -> primitives::Color,
     color_function: F,

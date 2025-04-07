@@ -2,7 +2,6 @@ use std::{
     ffi::CString,
     fs::File,
     io::{self, BufWriter, Read, Write},
-    num::NonZeroU32,
     sync::atomic::{AtomicBool, AtomicU64, Ordering},
     thread,
     time::{Duration, Instant},
@@ -10,7 +9,7 @@ use std::{
 
 use game_of_life::Context;
 use glmath::{vector::Vector2, Element};
-use winter::{bindings, vao::VertexArrayObject};
+use winter::{bindings, vao::VertexArrayObject, NonZeroUInt};
 use winter::{common, primitives};
 
 const SAVE_FILE_OUTPUT_DIR: &str = "./target/save_data.txt";
@@ -160,8 +159,8 @@ fn main() -> Result<(), String> {
     let vao_builder = common::create_grid(
         Vector2::from([-1.; 2]).add(Vector2::from([0.1; 2])),
         Vector2::from([1.; 2]).sub(Vector2::from([0.1; 2])),
-        NonZeroU32::new(arena_size as u32).unwrap(),
-        NonZeroU32::new(arena_size as u32).unwrap(),
+        NonZeroUInt::new(arena_size as u32).unwrap(),
+        NonZeroUInt::new(arena_size as u32).unwrap(),
         0.,
         |_, _, _| color_dead,
     );

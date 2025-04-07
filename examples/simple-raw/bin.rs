@@ -48,7 +48,7 @@ impl SimpleStruct {
         };\0";
 
         let fragment_shader_text: &'static [u8] = b"#version 320 es
-        precision lowp float;
+        precision mediump float;
         out vec4 outputF;
         void main()
         {

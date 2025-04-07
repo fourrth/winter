@@ -6,8 +6,9 @@ use crate::{
     opengl::{self, GLIndexType, GLVertexType},
     raw,
     vao::VertexArrayObject,
+    NonZeroUInt,
 };
-use std::{ffi::c_void, num::NonZeroU32};
+use std::ffi::c_void;
 
 use crate::raw::buffers::{self, BufferTarget};
 
@@ -24,7 +25,7 @@ pub struct Layout {
 
 #[derive(Debug)]
 struct Guard {
-    pub inner: NonZeroU32,
+    pub inner: NonZeroUInt,
 }
 
 impl Drop for Guard {
@@ -68,8 +69,8 @@ pub struct VertexBufferDynamic {
 impl VertexBufferDynamic {
     /// Convert's your data into a useable OpenGL object
     pub fn from(data: VertexBufferDynamicData) -> Self {
-        let id: NonZeroU32 = unsafe {
-            NonZeroU32::new(
+        let id: NonZeroUInt = unsafe {
+            NonZeroUInt::new(
                 raw::buffers::CreateBuffer(
                     data.data.as_ptr() as *const c_void,
                     data.data.len() as isize,
@@ -149,7 +150,7 @@ impl VertexBufferStatic {
     /// Convert's your data into a useable OpenGL object
     pub fn from(data: VertexBufferStaticData) -> Self {
         let id = unsafe {
-            NonZeroU32::new(
+            NonZeroUInt::new(
                 raw::buffers::CreateBuffer(
                     data.data.as_ptr() as *const c_void,
                     data.data.len() as isize,
@@ -177,7 +178,7 @@ impl VertexBufferStatic {
 
 pub trait VertexBufferT {
     /// Get internal gl id
-    fn id(&self) -> NonZeroU32;
+    fn id(&self) -> NonZeroUInt;
     /// Get the layout of the data
     fn layout(&self) -> Layout;
     fn bind(&self) {
@@ -205,7 +206,7 @@ pub trait VertexBufferT {
 }
 pub trait IndexBufferT {
     /// Get internal gl id
-    fn id(&self) -> NonZeroU32;
+    fn id(&self) -> NonZeroUInt;
     /// Get the amount of indices stored in the buffer
     fn len(&self) -> usize;
     fn bind(&self) {
@@ -214,7 +215,7 @@ pub trait IndexBufferT {
 }
 
 impl VertexBufferT for VertexBufferDynamic {
-    fn id(&self) -> NonZeroU32 {
+    fn id(&self) -> NonZeroUInt {
         self.id.inner
     }
     fn layout(&self) -> Layout {
@@ -223,7 +224,7 @@ impl VertexBufferT for VertexBufferDynamic {
 }
 
 impl VertexBufferT for VertexBufferStatic {
-    fn id(&self) -> NonZeroU32 {
+    fn id(&self) -> NonZeroUInt {
         self.id.inner
     }
     fn layout(&self) -> Layout {
@@ -261,7 +262,7 @@ pub struct IndexBuffer {
     data: IndexBufferData,
 }
 impl IndexBufferT for IndexBuffer {
-    fn id(&self) -> NonZeroU32 {
+    fn id(&self) -> NonZeroUInt {
         self.id.inner
     }
     fn len(&self) -> usize {
@@ -272,7 +273,7 @@ impl IndexBuffer {
     /// Converts from your data into an OpenGL type
     pub fn from(data: IndexBufferData) -> Self {
         let id = unsafe {
-            NonZeroU32::new(
+            NonZeroUInt::new(
                 raw::buffers::CreateBuffer(
                     data.data.as_ptr() as *const c_void,
                     data.data.len() as isize,

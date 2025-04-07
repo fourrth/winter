@@ -1,7 +1,7 @@
 use glmath::vector::Vector2;
-use std::{ffi::CString, num::NonZeroU32, time::Instant};
-use winter::bindings;
+use std::{ffi::CString, time::Instant};
 use winter::vao::VertexArrayObject;
+use winter::{bindings, NonZeroUInt};
 use winter::{common, primitives};
 
 fn main() -> Result<(), String> {
@@ -27,8 +27,8 @@ fn main() -> Result<(), String> {
     let vao_builder = common::create_grid(
         Vector2::from([-1.; 2]).add(margin),
         Vector2::from([1.; 2]).sub(margin),
-        NonZeroU32::new(arena_cell_length).unwrap(),
-        NonZeroU32::new(arena_cell_length).unwrap(),
+        NonZeroUInt::new(arena_cell_length).unwrap(),
+        NonZeroUInt::new(arena_cell_length).unwrap(),
         0.,
         |_, _, color_change| {
             if color_change % 3 == 0 {
