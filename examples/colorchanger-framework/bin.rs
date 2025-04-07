@@ -1,6 +1,7 @@
 use glmath::vector::Vector2;
 use std::{ffi::CString, num::NonZeroU32, time::Instant};
 use winter::bindings;
+use winter::vao::VertexArrayObject;
 use winter::{common, primitives};
 
 fn main() -> Result<(), String> {

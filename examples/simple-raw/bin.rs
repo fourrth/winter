@@ -1,5 +1,5 @@
 use glfw::ffi::GLFWwindow;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use std::{collections::HashMap, ffi::c_void};
 use winter::bindings::{
     self,
@@ -19,15 +19,13 @@ enum DrawKind {
     Square,
     Triangle,
 }
-lazy_static! {
-    static ref DrawKindMap: HashMap<&'static str, DrawKind> = {
-        use DrawKind::*;
-        let mut map = HashMap::new();
-        map.insert("square", Square);
-        map.insert("triangle", Triangle);
-        map
-    };
-}
+static DRAW_KIND_MAP: Lazy<HashMap<&'static str, DrawKind>> = Lazy::new(|| {
+    use DrawKind::*;
+    let mut map = HashMap::new();
+    map.insert("square", Square);
+    map.insert("triangle", Triangle);
+    map
+});
 
 struct SimpleStruct {
     pub vertex_shader_text: &'static [u8],
@@ -130,7 +128,7 @@ impl SimpleStruct {
 fn main() -> Result<(), String> {
     let drawkind = match std::env::args().skip(1).next() {
         Some(str) => {
-            if let Some(&kind) = DrawKindMap.get(str.to_ascii_lowercase().as_str()) {
+            if let Some(&kind) = DRAW_KIND_MAP.get(str.to_ascii_lowercase().as_str()) {
                 kind
             } else {
                 // then no good match, log and do default

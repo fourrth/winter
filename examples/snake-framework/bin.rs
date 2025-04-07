@@ -12,7 +12,7 @@ use std::{
 
 use glmath::vector::Vector2;
 use snake::{Coordinate, Direction};
-use winter::bindings;
+use winter::{bindings, vao::VertexArrayObject};
 use winter::{common, primitives};
 
 #[inline(always)]
@@ -235,11 +235,13 @@ fn main() {
                 bindings::ClearColor(0.8, 0.7, 0.7, 1.0);
                 bindings::Clear(bindings::COLOR_BUFFER_BIT);
 
-                context.vao.bind();
-
-                context.vao.indices.bind();
-
                 if let Ok(cxt) = snake_context.lock() {
+                    let mut updater = context.vao.update_color_component();
+                    let data = bytemuck::cast_slice_mut::<f32, [[f32; 3]; 6]>(updater.data_mut());
+                    // 1 point = 3 f32
+                    // 1 tri = 3 points
+                    // 1 rect = 2 tri
+
                     move_dir = cxt.move_dir;
                     score = cxt.score;
                     for (cx, &ca) in cxt.get_arena_iter().enumerate() {
@@ -250,14 +252,13 @@ fn main() {
                             snake::Cell::Food => color_snake_food,
                         };
 
-                        for triangle_color in context.vao.get_color_component_mut(cx) {
-                            for point_color in common::convert_comp_triangle(triangle_color) {
-                                *point_color = c.0;
-                            }
+                        for p in data[cx].iter_mut() {
+                            *p = c.0 .0;
                         }
                     }
+                    // updater will write when dropped
+                    updater.write();
                 }
-                context.vao.update_color_component_all();
 
                 context.vao.draw();
             } else {

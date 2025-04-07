@@ -19,7 +19,7 @@ cargo r --example snake-framework -- 1200 1200
 ```
 
 Currently, winter is not very usable for other crates. The only supported use is to use the crate through the provided examples.
-Another thing is that currently the function loader is bundled in the repo, however this may change in the future. Please refer to this readme for more details on building/usage
+Please refer to this readme for more details on building/usage
 
 ### OpenGL
 
@@ -77,11 +77,6 @@ Not very complete, but has more features than snake:
    - basically, if you press *KEY_ENTER* normally, it generates the new state randomly. However, if you press backspace, you will load the state you saved previously
    - Note this also provides the great feature that it will crash if you have not saved before trying to load a saved state
  - *KEY_LEFT* and *KEY_RIGHT* decrease and increase the generations per second respectively 
-
-## Future Plans
-
-As said previously, this crate is constantly being reworked,
-however there are some things that are known for certain
 
 ### v1.5
 

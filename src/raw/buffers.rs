@@ -10,6 +10,7 @@ use std::{ffi::c_void, ptr::NonNull};
 pub enum BufferTarget {
     ArrayBuffer,
     ElementArrayBuffer,
+    CopyWriteBuffer,
 }
 
 impl BufferTarget {
@@ -18,6 +19,7 @@ impl BufferTarget {
         match self {
             BufferTarget::ArrayBuffer => bindings::ARRAY_BUFFER,
             BufferTarget::ElementArrayBuffer => bindings::ELEMENT_ARRAY_BUFFER,
+            BufferTarget::CopyWriteBuffer => bindings::COPY_WRITE_BUFFER,
         }
     }
 }
@@ -31,6 +33,9 @@ impl std::fmt::Debug for BufferTarget {
             }
             BufferTarget::ElementArrayBuffer => {
                 write!(f, "Element Array Buffer")
+            }
+            BufferTarget::CopyWriteBuffer => {
+                write!(f, "Copy Write Buffer")
             }
         }
     }
@@ -111,7 +116,11 @@ pub enum MapAccess {
 pub struct MapAccessBF(pub GLbitfield);
 impl MapAccessBF {
     #[inline]
-    pub fn add(self, other: MapAccess) -> Self {
+    pub const fn new() -> Self {
+        Self(0)
+    }
+    #[inline]
+    pub const fn add(self, other: MapAccess) -> Self {
         Self(
             self.0
                 | match other {

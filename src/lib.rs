@@ -1,9 +1,13 @@
 //! This is the library for my opengl application
 
-mod buffer;
-mod shader;
-mod vao;
+#[cfg(not(feature = "raw"))]
+pub mod buffer;
+#[cfg(not(feature = "raw"))]
+pub mod shader;
+#[cfg(not(feature = "raw"))]
+pub mod vao;
 
+pub mod opengl;
 pub mod bindings {
     include!(concat!(env!("OUT_DIR"), "/gl_bindings.rs"));
 }
@@ -13,8 +17,7 @@ pub mod raw;
 pub mod context;
 #[cfg(not(feature = "raw"))]
 pub use context::*;
-
-#[cfg(feature = "common")]
+#[cfg(not(feature = "raw"))]
 pub mod common;
 
 type Float = f32;

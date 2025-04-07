@@ -1,6 +1,6 @@
 [package]
 name = "winter"
-version = "1.3.2"
+version = "1.4.0"
 edition = "2021"
 description = "This is a glfw/opengl application"
 build = "build.rs"
@@ -34,14 +34,14 @@ name = "key_callback-raw"
 path = "examples/key_callback-raw/bin.rs"
 
 [features]
-default = ["common"]
-common = []
+default = []
 raw = []
 
 [dependencies]
 glfw = {version = "0.55.*"}
-bytemuck = {version = "1.*",features = ["must_cast"]}
+bytemuck = {version = "1.*",features = ["must_cast","extern_crate_alloc"]}
 glmath ={ version = "0.1.*",git = "https://github.com/fourrth/glmath.git"}
+num-integer ={ version = "0.1.*"}
 
 [dev-dependencies]
 game_of_life = {path = "examples/game_of_life-framework/game_of_life"}
@@ -49,7 +49,6 @@ snake ={ path = "examples/snake-framework/snake"}
 once_cell = {version = "1.19.*"}
 rand = {version = "0.8.*"}
 serde_json = {version = "1.0.*"}
-lazy_static = {version = "1.5.*"}
 
 [build-dependencies]
 gl_generator = { version = "0.14.*"}

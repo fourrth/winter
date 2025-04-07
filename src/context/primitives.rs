@@ -76,8 +76,9 @@ macro_rules! float_data_to_u8_slice {
 }
 
 pub mod triangle {
+    use crate::vao::default::Component;
+
     use super::*;
-    use crate::vao::Component;
 
     pub type Data = ([Vector3<Float>; 3], [Color; 3]);
 
@@ -160,8 +161,9 @@ pub mod triangle {
 }
 
 pub mod rectangle {
+    use crate::vao::default::Component;
+
     use super::*;
-    use crate::vao::Component;
 
     pub type Data = [triangle::Data; 2];
     pub const KIND: ComponentKind = ComponentKind::Rectangle;
@@ -200,8 +202,9 @@ pub mod rectangle {
 }
 
 pub mod rectangular_prism {
+    use crate::vao::default::Component;
+
     use super::*;
-    use crate::vao::Component;
 
     pub type Data = [rectangle::Data; 6];
     pub const KIND: ComponentKind = ComponentKind::RectangularPrism;

@@ -1,12 +1,14 @@
 //! This is a collection of quick and dirty functions that are good to have
+//!
+//! This module is very unstable and very subject to change
 
 use std::num::NonZeroU32;
 
-use crate::bindings;
+use crate::{bindings, vao::default};
 use bytemuck::Contiguous;
 use glmath::vector::{Vector2, Vector3};
 
-use crate::{primitives, vao::VertexArrayObjectBuilder, Float};
+use crate::{primitives, Float};
 
 #[inline(always)]
 pub fn create_rectangle(
@@ -40,7 +42,7 @@ pub fn create_grid<F: Fn(u32, u32, u32) -> primitives::Color>(
     inner_margin: Float,
     // color_function: fn(x_index: u32, y_index: u32, cnt: u32) -> primitives::Color,
     color_function: F,
-) -> VertexArrayObjectBuilder {
+) -> default::BuilderDefault<Float, u32, Float> {
     let grid_width_f = grid_width.into_integer() as Float;
     let grid_height_f = grid_height.into_integer() as Float;
 
@@ -52,7 +54,7 @@ pub fn create_grid<F: Fn(u32, u32, u32) -> primitives::Color>(
         - (inner_margin * (grid_height_f - 1.)))
         / grid_height_f;
 
-    let mut builder = VertexArrayObjectBuilder::create();
+    let mut builder: default::BuilderDefault<Float, u32, Float> = default::BuilderDefault::create();
 
     let mut p1 = Vector3::from([pos_bottom_left.0[0], pos_top_right.0[1] - cell_height, 0.]);
 
@@ -80,6 +82,7 @@ pub fn create_grid<F: Fn(u32, u32, u32) -> primitives::Color>(
         p1.0[1] -= cell_height + inner_margin;
     }
     builder
+    // todo!()
 }
 
 #[inline(always)]

@@ -1,315 +1,320 @@
-use std::ffi;
+//! This module holds the VertexArrayObject information
+//!
+//! You can either create your own vao implementation
+//! or you can use the preexisting one given in [`default`]
 
-use crate::bindings;
-use crate::{
-    buffer::{GLType, IndexBuffer, Layout, VertexBuffer},
-    primitives,
-    raw::buffers::{self, BufferTarget},
-    Float,
-};
-use glmath::vector::Vector3;
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Component {
-    component_kind: primitives::ComponentKind,
-    data: Box<[u8]>,
+/// Trait for implementing VertexArrayObjects
+///
+/// Implement this trait on anything that you want
+/// to manage the various buffers OpenGL has access to
+pub trait VertexArrayObject {
+    /// draw should automatically bind the VertexArrayObject
+    /// and in general, draw with the mesh
+    fn draw(&self);
+    fn bind(&self);
 }
 
-impl Component {
-    pub fn new<'a>(kind: primitives::ComponentKind, data: &'a [u8]) -> Self {
-        Self {
-            component_kind: kind,
-            data: Box::from(data),
+/// This trait holds the data before telling OpenGL about it
+///
+/// A type that implements this trait holds the data until
+/// it is time to tell OpenGL about it
+pub trait VertexArrayObjectData {
+    type VAO: VertexArrayObject;
+    fn build(self) -> Self::VAO;
+}
+
+pub mod default {
+    //! This module holds the default implementation for VertexArrayObjects
+    //!
+    //! This module will most likely be refactored/moved into a
+    //! completely separate crate eventually, as it is the main
+    //! design principle for this engine section of the crate
+    //! to only give the user access to creating their own
+    //! OpenGL engines
+
+    use std::{marker::PhantomData, num::NonZeroU32};
+
+    use glmath::vector::Vector3;
+
+    use crate::{
+        bindings::{self, types::GLint},
+        buffer::{
+            IndexBuffer, IndexBufferData, IndexBufferT, Layout, VertexBufferDynamic,
+            VertexBufferDynamicData, VertexBufferT,
+        },
+        common::roll_gl_errors,
+        opengl::{GLIndexType, GLVertexType},
+        primitives,
+        raw::{
+            self,
+            buffers::{BufferTarget, MapAccess, MapAccessBF},
+        },
+        Float,
+    };
+
+    use super::{VertexArrayObject, VertexArrayObjectData};
+
+    #[derive(Debug)]
+    struct Guard {
+        inner: NonZeroU32,
+    }
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            unsafe { raw::buffers::DeleteVertexArray(self.inner.into()) };
         }
     }
-}
 
-#[derive(Debug, Clone)]
-pub struct VertexArrayObject {
-    id: u32,
-
-    /// should we update the opengl data?
-    /// this is set whenever a &mut is acquired
-    pub data_update: bool,
-
-    // a pocket is a (start,end) where it's purpose
-    // is that you can do &data[pocket.0..pocket.1]
-    // to get the required slice
-    position_pocket_array: Vec<Vec<(usize, usize)>>,
-    pub position: VertexBuffer,
-
-    color_pocket_array: Vec<Vec<(usize, usize)>>,
-    pub color: VertexBuffer,
-    pub indices: IndexBuffer,
-}
-
-impl VertexArrayObject {
-    pub fn bind(&self) {
-        unsafe { bindings::BindVertexArray(self.id) };
-    }
-    pub fn draw(&self) {
-        self.indices.bind();
-        unsafe {
-            bindings::DrawElements(
-                bindings::TRIANGLES,
-                self.indices.len as i32,
-                self.indices.ty.get_glenum(),
-                std::ptr::null(),
-            );
-        }
-    }
-    /// get component data to position components
-    pub fn get_position_component(&self, index: usize) -> Vec<&[u8]> {
-        self.position_pocket_array[index]
-            .iter()
-            .map(|&(start, end)| {
-                &self.position.buffer.data[start..end] //
-            })
-            .collect()
-    }
-    /// get mutable component data to position components
-    pub fn get_position_component_mut(&mut self, index: usize) -> Vec<&mut [u8]> {
-        unsafe {
-            let data: *mut u8 = self.position.buffer.data.as_mut_ptr();
-            self.position_pocket_array[index]
-                .iter()
-                .map(|&(start, end)| std::slice::from_raw_parts_mut(data.add(start), end))
-                .collect()
-        }
-    }
-    /// get component data to position components
-    pub fn get_color_component(&self, index: usize) -> Vec<&[u8]> {
-        self.color_pocket_array[index]
-            .iter()
-            .map(|&(start, end)| {
-                &self.color.buffer.data[start..end] //
-            })
-            .collect()
-    }
-    /// get mutable component data to color components
-    pub fn get_color_component_mut(&mut self, index: usize) -> Vec<&mut [u8]> {
-        unsafe {
-            let data: *mut u8 = self.color.buffer.data.as_mut_ptr();
-            self.color_pocket_array[index]
-                .iter()
-                .map(|&(start, end)| std::slice::from_raw_parts_mut(data.add(start), end))
-                .collect()
-        }
-    }
-    /// take a component and tell opengl to update it
-    pub fn update_position_component(&mut self, index: usize) {
-        let _ = index;
-        self.update_position_component_all();
-    }
-    /// reload the entire position buffer
-    pub fn update_position_component_all(&mut self) {
-        self.position.buffer.bind(BufferTarget::ArrayBuffer);
-        // right now we just set the entire data again because
-        // I want to make sure that this actually works
-        // but in the future we can use glBufferSubData
-        // and just update what we have to
-        unsafe {
-            bindings::BufferData(
-                bindings::ARRAY_BUFFER,
-                self.position.buffer.data.len() as isize,
-                self.position.buffer.data.as_ptr() as *const ffi::c_void,
-                bindings::STATIC_DRAW,
-            );
-        }
-    }
-    /// take a component and tell opengl to update it
-    pub fn update_color_component(&mut self, index: usize) {
-        let _ = index;
-        self.update_color_component_all();
-    }
-    /// update the entire buffer
-    pub fn update_color_component_all(&mut self) {
-        self.color.buffer.bind(BufferTarget::ArrayBuffer);
-        // right now we just set the entire data again because
-        // I want to make sure that this actually works
-        unsafe {
-            bindings::BufferData(
-                bindings::ARRAY_BUFFER,
-                self.color.buffer.data.len() as isize,
-                self.color.buffer.data.as_ptr() as *const ffi::c_void,
-                bindings::STATIC_DRAW,
-            );
-        }
-    }
-}
-
-impl Drop for VertexArrayObject {
-    // TODO: make this have an unsafe variant which the context holds
-    // that way it can drop all of its vaos at once and doesn't need to
-    // do a function call for each vao, just one which gets rid of everything.
-    fn drop(&mut self) {
-        unsafe { buffers::DeleteVertexArray(self.id) };
-    }
-}
-
-// turns Triangle (not triangle but its tuple) into its components of (pos,color)
-fn converter_triangle<'a>(data: &'a [u8]) -> (&'a [u8], &'a [u8]) {
-    data.split_at(std::mem::size_of::<[Vector3<Float>; 3]>())
-}
-
-#[derive(Debug)]
-pub struct VertexArrayObjectBuilder {
-    // not public because we want to be able
-    // to change what the user puts stuff in
-    // i.e., the buffer can change despite
-    // what the user puts in
-    components: Vec<Component>,
-}
-
-impl VertexArrayObjectBuilder {
-    pub fn create() -> Self {
-        Self { components: vec![] }
+    #[derive(Debug)]
+    pub struct Vao<P: GLVertexType, I: GLIndexType, C: GLVertexType> {
+        id: Guard,
+        position_vb: VertexBufferDynamic,
+        color_vb: VertexBufferDynamic,
+        index_buffer: IndexBuffer,
+        /*     static_vertex_buffers: Vec<VertexBufferStatic>,
+        dynamic_vertex_buffers: Vec<VertexBufferDynamic>,
+        index_buffers: IndexBuffer,*/
+        _pb: PhantomData<P>,
+        _ib: PhantomData<I>,
+        _cb: PhantomData<C>,
     }
 
-    pub fn add(mut self, component: Component) -> Self {
-        self.components.push(component);
-        self
+    /// Wrapper type for updating your VertexBuffer
+    ///
+    /// Will push changes to OpenGL when dropped
+    pub struct VertexBufferUpdater<'a, V: GLVertexType> {
+        id: NonZeroU32,
+        inner: &'a mut VertexBufferDynamicData,
+        _v: PhantomData<V>,
     }
-
-    pub fn build(self) -> VertexArrayObject {
-        // should convert the components
-        // into Attributes
-
-        let id = unsafe {
-            let mut id: u32 = 0;
-            bindings::GenVertexArrays(1, &mut id);
-            bindings::BindVertexArray(id);
-            id
-        };
-
-        let mut vao = VertexArrayObject {
-            id,
-            position_pocket_array: vec![],
-            color_pocket_array: vec![],
-            data_update: false,
-            position: VertexBuffer::new(
-                vec![],
-                Layout {
-                    attrib_len: 3,
-                    attrib_type: GLType::Float,
-                    attrib_loc: 0, // pos is defined as 0
-                },
-            ),
-            color: VertexBuffer::new(
-                vec![],
-                Layout {
-                    attrib_len: 3,
-                    attrib_type: GLType::Float,
-                    attrib_loc: 1, // color is defined as 1
-                },
-            ),
-
-            indices: IndexBuffer::new(vec![], GLType::UInt, 0),
-        };
-
-        #[inline(always)]
-        fn rectangle(data: &[u8], vao: &mut VertexArrayObject) {
-            //TODO: Make this do the optimized indices...
-            // this doesn't right now because we are giving straight
-            // triangle data, which would only work if the indices are sequential.
-            // we need to change how the data is done.
-            let data_uint =
-                [0u32, 1u32, 2u32, 3u32, 4u32, 5u32].map(|val: u32| vao.indices.len + val);
-            let ind = bytemuck::must_cast_slice::<u32, u8>(&data_uint);
-
-            let triangle_dos = data.split_at(std::mem::size_of::<primitives::triangle::Data>());
-
-            debug_assert_eq!(triangle_dos.0.len(), triangle_dos.1.len());
-
-            let mut position_pockets = Vec::with_capacity(2);
-            let mut color_pockets = Vec::with_capacity(2);
-
-            for cb in [triangle_dos.0, triangle_dos.1].into_iter() {
-                let (pos, col) = converter_triangle(cb);
-
-                debug_assert_eq!(pos.len(), col.len());
-                debug_assert_eq!(pos.len(), std::mem::size_of::<[Vector3<Float>; 3]>());
-
-                let pos_pocket = (
-                    vao.position.buffer.data.len(),
-                    vao.position.buffer.data.len() + pos.len(),
-                );
-                position_pockets.push(pos_pocket);
-
-                let color_pocket = (
-                    vao.color.buffer.data.len(),
-                    vao.color.buffer.data.len() + col.len(),
-                );
-                color_pockets.push(color_pocket);
-
-                vao.position.buffer.data.extend(pos.into_iter());
-
-                vao.color.buffer.data.extend(col.into_iter());
+    //TODO: impl deref for this
+    impl<'a, V: GLVertexType> VertexBufferUpdater<'a, V> {
+        pub fn from(data: &'a mut VertexBufferDynamicData, id: NonZeroU32) -> Self {
+            Self {
+                id,
+                inner: data,
+                _v: PhantomData,
             }
-            vao.indices.buffer.data.extend(ind.into_iter());
-            vao.indices.len += data_uint.len() as u32;
-
-            vao.position_pocket_array.push(position_pockets);
-            vao.color_pocket_array.push(color_pockets);
         }
-
-        for ca in self.components {
-            match ca.component_kind {
-                primitives::ComponentKind::Triangle => {
-                    let data_uint = [0u32, 1u32, 2u32].map(|val: u32| vao.indices.len + val);
-                    let ind = bytemuck::must_cast_slice::<u32, u8>(&data_uint);
-
-                    let (pos, col) = converter_triangle(&ca.data);
-
-                    debug_assert_eq!(pos.len(), col.len());
-                    debug_assert_eq!(pos.len(), std::mem::size_of::<[Vector3<Float>; 3]>());
-
-                    let pos_pocket = (
-                        vao.position.buffer.data.len(),
-                        vao.position.buffer.data.len() + pos.len(),
+        pub fn data_mut(&mut self) -> &mut [V] {
+            bytemuck::cast_slice_mut::<u8, V>(&mut self.inner.data)
+        }
+        /// Writes your changes to OpenGL.
+        ///  No different than simply dropping the Updater
+        pub fn write(self) {}
+    }
+    impl<'a, V: GLVertexType> Drop for VertexBufferUpdater<'a, V> {
+        fn drop(&mut self) {
+            unsafe {
+                // will push the changes to OpenGL
+                bindings::BindBuffer(bindings::ARRAY_BUFFER, self.id.into());
+                if cfg!(debug_assertions) {
+                    // let's check if our src size == buffer size
+                    let mut gl_buffer_size = 0i32;
+                    bindings::GetBufferParameteriv(
+                        bindings::ARRAY_BUFFER,
+                        bindings::BUFFER_SIZE,
+                        &mut gl_buffer_size as &mut _ as *mut GLint,
                     );
-                    vao.position_pocket_array.push(vec![pos_pocket]);
-
-                    let color_pocket = (
-                        vao.color.buffer.data.len(),
-                        vao.color.buffer.data.len() + col.len(),
-                    );
-                    vao.color_pocket_array.push(vec![color_pocket]);
-
-                    vao.position.buffer.data.extend(pos.into_iter());
-
-                    vao.color.buffer.data.extend(col.into_iter());
-
-                    vao.indices.buffer.data.extend(ind.into_iter());
-                    vao.indices.len += data_uint.len() as u32;
+                    assert_eq!(gl_buffer_size as usize, self.inner.data.len());
                 }
-                primitives::ComponentKind::Rectangle => rectangle(&ca.data, &mut vao),
+
+                let dst = match raw::buffers::MapBufferRange(
+                    BufferTarget::ArrayBuffer,
+                    0,
+                    self.inner.data.len() as isize,
+                    MapAccessBF::new()
+                        .add(MapAccess::Write)
+                        .add(MapAccess::DiscardBuffer),
+                ) {
+                    Some(val) => val,
+                    None => {
+                        // then pop gl error
+                        roll_gl_errors();
+                        panic!()
+                    }
+                }
+                .as_ptr() as *mut u8;
+
+                std::ptr::copy(self.inner.data.as_ptr(), dst, self.inner.data.len());
+
+                raw::buffers::UnmapBuffer(BufferTarget::ArrayBuffer);
+                bindings::BindBuffer(bindings::ARRAY_BUFFER, 0);
+            }
+        }
+    }
+
+    impl<'a, P: GLVertexType, I: GLIndexType, C: GLVertexType> Vao<P, I, C> {
+        /// This gives you a &mut to the position data.
+        /// You can then modify this reference and
+        /// when you drop the reference,
+        /// it will write the new buffer to OpenGL
+        pub fn update_position_component(&'a mut self) -> VertexBufferUpdater<'a, P> {
+            let id = self.position_vb.id().into();
+            VertexBufferUpdater::from(unsafe { self.position_vb.as_data_mut() }, id)
+        }
+        /// This gives you a &mut to the color data.
+        /// You can then modify this reference and
+        /// when you drop the reference,
+        /// it will write the new buffer to OpenGL
+        pub fn update_color_component(&'a mut self) -> VertexBufferUpdater<'a, C> {
+            let id = self.color_vb.id().into();
+            VertexBufferUpdater::from(unsafe { self.color_vb.as_data_mut() }, id)
+        }
+    }
+    impl<P: GLVertexType, I: GLIndexType, C: GLVertexType> VertexArrayObject for Vao<P, I, C> {
+        fn bind(&self) {
+            unsafe { bindings::BindVertexArray(self.id.inner.into()) };
+        }
+        fn draw(&self) {
+            // vao is autobound at draw, just like the index_buffer
+            self.bind();
+            unsafe {
+                self.index_buffer.bind();
+                bindings::DrawElements(
+                    bindings::TRIANGLES,
+                    self.index_buffer.len() as i32,
+                    I::to_glenum(),
+                    std::ptr::null(),
+                );
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct BuilderDefault<P: GLVertexType, I: GLIndexType, C: GLVertexType> {
+        vertex_data: VertexBufferDynamicData,
+        index_data: IndexBufferData,
+        color_data: VertexBufferDynamicData,
+
+        _pb: PhantomData<P>,
+        _ib: PhantomData<I>,
+        _cb: PhantomData<C>,
+    }
+
+    impl<P: GLVertexType, I: GLIndexType, C: GLVertexType> BuilderDefault<P, I, C> {
+        pub fn create() -> Self {
+            Self {
+                vertex_data: VertexBufferDynamicData::new::<P>(
+                    None,
+                    Layout {
+                        attrib_len: 3,
+                        attrib_type: P::to_glenum(),
+                        attrib_loc: 0, // pos is defined as 0
+                    },
+                ),
+                index_data: IndexBufferData::new::<I>(None),
+                color_data: VertexBufferDynamicData::new::<P>(
+                    None,
+                    Layout {
+                        attrib_len: 3,
+                        attrib_type: C::to_glenum(),
+                        attrib_loc: 1, // pos is defined as 0
+                    },
+                ),
+
+                _pb: PhantomData,
+                _ib: PhantomData,
+                _cb: PhantomData,
+            }
+        }
+        fn triangle(&mut self, tri: &[u8]) {
+            debug_assert_eq!(tri.len(), std::mem::size_of::<primitives::triangle::Data>());
+
+            let len = self.index_data.len() as u32;
+            let (p, c) = converter_triangle(tri);
+
+            let i = [0u32, 1u32, 2u32].map(|val| val + len);
+            self.vertex_data.data.extend(p);
+            self.color_data.data.extend(c);
+            self.index_data
+                .data
+                .extend(bytemuck::must_cast_slice::<u32, u8>(&i));
+        }
+        fn rectangle(&mut self, rect: &[u8]) {
+            for tri in rect.chunks_exact(std::mem::size_of::<primitives::triangle::Data>()) {
+                self.triangle(tri);
+            }
+        }
+        pub fn add(mut self, dob: Component) -> Self {
+            match dob.component_kind {
+                primitives::ComponentKind::Triangle => {
+                    self.triangle(&dob.data) //
+                }
+                primitives::ComponentKind::Rectangle => {
+                    self.rectangle(&dob.data) //
+                }
                 primitives::ComponentKind::RectangularPrism => {
-                    debug_assert_eq!(
-                        ca.data.len() / 6,
-                        std::mem::size_of::<primitives::rectangle::Data>()
-                    );
-                    for cx in 0..6 {
-                        rectangle(
-                            &ca.data[cx * std::mem::size_of::<primitives::rectangle::Data>()
-                                ..(cx + 1) * std::mem::size_of::<primitives::rectangle::Data>()],
-                            &mut vao,
-                        );
+                    for rect in dob
+                        .data
+                        .chunks_exact(std::mem::size_of::<primitives::rectangle::Data>())
+                    {
+                        self.rectangle(rect);
                     }
                 }
             }
+            self
         }
+    }
 
-        // Now we complete setting up the buffers
+    impl<P: GLVertexType, I: GLIndexType, C: GLVertexType> VertexArrayObjectData
+        for BuilderDefault<P, I, C>
+    {
+        type VAO = Vao<P, I, C>;
+        fn build(self) -> Self::VAO {
+            let id = unsafe {
+                let mut id: u32 = 0;
+                bindings::GenVertexArrays(1, &mut id);
+                bindings::BindVertexArray(id);
+                id
+            };
 
-        vao.position.buffer.setup_buffer(BufferTarget::ArrayBuffer);
-        vao.color.buffer.setup_buffer(BufferTarget::ArrayBuffer);
-        vao.indices
-            .buffer
-            .setup_buffer(BufferTarget::ElementArrayBuffer);
+            let position_vb = VertexBufferDynamic::from(self.vertex_data);
+            let color_vb = VertexBufferDynamic::from(self.color_data);
+            let index_buffer = IndexBuffer::from(self.index_data);
 
-        vao.position.bind_buffer(BufferTarget::ArrayBuffer);
-        vao.color.bind_buffer(BufferTarget::ArrayBuffer);
-        vao
+            let vao: Vao<P, I, C> = Vao {
+                id: Guard {
+                    inner: NonZeroU32::new(id).unwrap(),
+                },
+                position_vb,
+                color_vb,
+                index_buffer,
+                _pb: PhantomData,
+                _ib: PhantomData,
+                _cb: PhantomData,
+            };
+
+            vao.position_vb.bind_to_vao(&vao);
+            vao.color_vb.bind_to_vao(&vao);
+
+            vao
+        }
+    }
+
+    // Keeping component and having it work
+    // like this is such a hack, but it's more
+    // important to just get something working first.
+    // After it's working, we can revamp primitives
+    // to be disappeared and we can switch to external
+    // vertex object files
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Component {
+        component_kind: primitives::ComponentKind,
+        data: Box<[u8]>,
+    }
+
+    impl Component {
+        pub fn new<'a>(kind: primitives::ComponentKind, data: &'a [u8]) -> Self {
+            Self {
+                component_kind: kind,
+                data: Box::from(data),
+            }
+        }
+    }
+
+    // old stuff coppied in
+    // turns Triangle (not triangle but its tuple) into its components of (pos,color)
+    fn converter_triangle<'a>(data: &'a [u8]) -> (&'a [u8], &'a [u8]) {
+        data.split_at(std::mem::size_of::<[Vector3<Float>; 3]>())
     }
 }

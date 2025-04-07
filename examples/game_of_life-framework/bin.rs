@@ -10,7 +10,7 @@ use std::{
 
 use game_of_life::Context;
 use glmath::{vector::Vector2, Element};
-use winter::bindings;
+use winter::{bindings, vao::VertexArrayObject};
 use winter::{common, primitives};
 
 const SAVE_FILE_OUTPUT_DIR: &str = "./target/save_data.txt";
@@ -239,7 +239,6 @@ fn main() -> Result<(), String> {
         GOL_CXT = Some(create_gol_cxt(arena_size as usize, None));
 
         context.program.enable();
-        context.vao.bind();
 
         static SHOULD_CLOSE: AtomicBool = AtomicBool::new(false);
 
@@ -320,8 +319,10 @@ fn main() -> Result<(), String> {
             bindings::ClearColor(0.8, 0.7, 0.7, 1.0);
             bindings::Clear(bindings::COLOR_BUFFER_BIT);
 
-            context.vao.indices.bind();
             if let Some(cxt) = &mut GOL_CXT {
+                let mut updater = context.vao.update_color_component();
+                let data = bytemuck::cast_slice_mut::<f32, [[f32; 3]; 6]>(updater.data_mut());
+
                 generation_count = cxt.cnt;
                 for (cx, cell) in cxt.get_data().into_iter().enumerate() {
                     // for each cell, paint it each frame and move it upwards
@@ -333,16 +334,11 @@ fn main() -> Result<(), String> {
                             color_dead
                         }
                     };
-
-                    for triangle_color in context.vao.get_color_component_mut(cx) {
-                        for point_color in common::convert_comp_triangle(triangle_color) {
-                            *point_color = c.0;
-                        }
+                    for p in data[cx].iter_mut() {
+                        *p = c.0 .0;
                     }
                 }
             }
-
-            context.vao.update_color_component_all();
 
             context.vao.draw();
 
