@@ -1,9 +1,13 @@
 [package]
 name = "winter"
-version = "1.4.1"
+version = "1.5.0-alpha"
 edition = "2021"
 description = "This is a glfw/opengl application"
 build = "build.rs"
+
+[[example]]
+name = "merge-framework"
+path = "examples/merge-framework/bin.rs"
 
 [[example]]
 name = "snake-framework"
@@ -40,7 +44,7 @@ raw = []
 [dependencies]
 glfw = {version = "0.55.*"}
 bytemuck = {version = "1.*",features = ["must_cast","extern_crate_alloc"]}
-glmath ={ version = "0.1.*",git = "https://github.com/fourrth/glmath.git"}
+glmath ={ version = "0.1.*",features = ["bytemuck"],git = "https://github.com/fourrth/glmath.git"}
 num-integer ={ version = "0.1.*"}
 
 [dev-dependencies]

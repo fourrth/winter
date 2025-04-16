@@ -1,6 +1,8 @@
 //! This module contains marker traits for OpenGL types,
 //! along with some OpenGL functions for the types
 
+use std::fmt::Debug;
+
 use bytemuck::Pod;
 use num_integer::Integer;
 
@@ -43,9 +45,10 @@ pub const fn get_size(gl_type: GLenum) -> Option<usize> {
     }
 }
 
-pub trait GLIndexType: Integer + Pod {
+pub trait GLIndexType: Integer + Pod + Debug {
     fn to_glenum() -> GLenum;
     fn from_usize(value: usize) -> Self;
+    fn to_usize(self) -> usize;
 }
 impl GLIndexType for GLubyte {
     fn to_glenum() -> GLenum {
@@ -53,6 +56,9 @@ impl GLIndexType for GLubyte {
     }
     fn from_usize(value: usize) -> Self {
         value as Self
+    }
+    fn to_usize(self) -> usize {
+        self as usize
     }
 }
 impl GLIndexType for GLushort {
@@ -62,6 +68,9 @@ impl GLIndexType for GLushort {
     fn from_usize(value: usize) -> Self {
         value as Self
     }
+    fn to_usize(self) -> usize {
+        self as usize
+    }
 }
 impl GLIndexType for GLuint {
     fn to_glenum() -> GLenum {
@@ -70,9 +79,12 @@ impl GLIndexType for GLuint {
     fn from_usize(value: usize) -> Self {
         value as Self
     }
+    fn to_usize(self) -> usize {
+        self as usize
+    }
 }
 
-pub trait GLVertexType: Pod {
+pub trait GLVertexType: Pod + Debug {
     fn to_glenum() -> GLenum;
 }
 impl GLVertexType for GLbyte {

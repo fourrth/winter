@@ -1,5 +1,3 @@
-pub mod primitives;
-
 mod window;
 
 use std::ffi::CString;
