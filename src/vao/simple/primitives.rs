@@ -11,6 +11,7 @@ use crate::opengl::{GLIndexType, GLVertexType};
 use super::Drawable;
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Component<V: GLVertexType, I: GLIndexType, C: GLVertexType> {
     data: Box<[u8]>,
 
@@ -52,16 +53,16 @@ impl<V: GLVertexType, I: GLIndexType, C: GLVertexType> Component<V, I, C> {
         data.extend(bytemuck::cast_slice::<_, u8>(&i_data));
 
         // LOG POINT
-        let vertex_data_tmp_compare = bytemuck::cast_slice::<u8, [V; 3]>(&data[0..v_size]);
-        let color_data_tmp_compare =
-            bytemuck::cast_slice::<u8, [C; 3]>(&data[v_size..v_size + c_size]);
-        let index_data_tmp_compare = bytemuck::cast_slice::<u8, [I; 6]>(&data[v_size + c_size..]);
+        // let vertex_data_tmp_compare = bytemuck::cast_slice::<u8, [V; 3]>(&data[0..v_size]);
+        // let color_data_tmp_compare =
+        //     bytemuck::cast_slice::<u8, [C; 3]>(&data[v_size..v_size + c_size]);
+        // let index_data_tmp_compare = bytemuck::cast_slice::<u8, [I; 6]>(&data[v_size + c_size..]);
 
-        std::hint::black_box((
-            vertex_data_tmp_compare,
-            color_data_tmp_compare,
-            index_data_tmp_compare,
-        ));
+        // std::hint::black_box((
+        //     vertex_data_tmp_compare,
+        //     color_data_tmp_compare,
+        //     index_data_tmp_compare,
+        // ));
 
         Self {
             data: data.into_boxed_slice(),
@@ -162,7 +163,21 @@ impl<V: GLVertexType, I: GLIndexType, C: GLVertexType> Component<V, I, C> {
         // or merged into larger pieces
         {
             let indices = other.get_indices_mut();
-            let len = indices.len();
+
+            // VERY IMPORTANT TODO HERE
+            //TODO: make component know about buffer layouts
+            // currently, component knows nothing about buffer layouts
+            // and this is below is simply hardcoded as 3 (each point is a vec3)
+            // this needs to change, along with pretty much
+            // everything about layouts. The whole idea of layouts
+            // can be done via const generics and associated functions
+            // we literally already do it with the C::gl_enum stuff,
+            // just need to do more.
+            // However,... that can be done another time as it's really
+            // not important. We will never not use vector 3s for the time being.
+
+            let len: usize = self.get_vertices().len() / (3 as usize);
+
             for ca in indices {
                 *ca = *ca + I::from_usize(len);
             }

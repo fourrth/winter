@@ -1,10 +1,12 @@
 use glmath::vector::Vector3;
 use std::{ffi::CString, time::Instant};
-use winter::bindings;
-use winter::vao::simple::shapes::Translate;
-use winter::vao::simple::IntoDrawable;
-use winter::vao::{simple, VertexArrayObject};
-
+use winter::{
+    bindings,
+    vao::{
+        simple::{self, shapes::Translate, IntoDrawable},
+        VertexArrayObject,
+    },
+};
 fn main() -> Result<(), String> {
     let width = 800;
     let height = 800;
@@ -18,7 +20,7 @@ fn main() -> Result<(), String> {
         )
     };
 
-    let arena_cell_length = 8;
+    let arena_cell_length = 2;
     // let margin = 0.05;
 
     let black = Vector3::from([0.0; 3]);
@@ -47,30 +49,36 @@ fn main() -> Result<(), String> {
         .unwrap()
     };
 
+    let rect_tri_serialized = serde_json::to_string(
+        &simple::constructs::RectangleSolidColor::<f32, u32, f32>::new1(
+            position.shift(Vector3::from([0.5, 0.0, 0.0])),
+            color2,
+        )
+        .into_drawable()
+        .merge(
+            simple::constructs::TriangleSolidColor::new1(
+                position.to_triangles()[0].shift(Vector3::from([0.0, -0.5, 0.0])),
+                color3,
+            )
+            .into_drawable(),
+        ),
+    )
+    .unwrap();
+    let pixel_grid = serde_json::to_string(
+        &simple::constructs::PixelGridSolidColorIndividual::new(position, index_grid, color_data),
+    )
+    .unwrap();
     let vao_builder: simple::Builder<f32, u32, f32> = simple::Builder::create()
         .add(
-            simple::constructs::PixelGridSolidColorIndividual::new(
-                position, index_grid, color_data,
+            serde_json::from_str::<simple::constructs::PixelGridSolidColorIndividual<_, _, _>>(
+                &pixel_grid,
             )
+            .unwrap()
             .into_drawable(),
         )
         .add(
-            simple::constructs::RectangleSolidColor::new1(
-                position.shift(Vector3::from([0.5, 0.0, 0.0])),
-                color2,
-            )
-            .into_drawable(),
-        )
-        .add(
-            simple::constructs::TriangleSolidColor::new1(
-                simple::shapes::Triangle::new(
-                    Vector3::from([0.0, 0.0, 0.0]),
-                    Vector3::from([0.5, 0.0, 0.0]),
-                    Vector3::from([0.5, 0.5, 0.0]),
-                ),
-                color1,
-            )
-            .into_drawable(),
+            serde_json::from_str::<simple::primitives::Component<_, _, _>>(&rect_tri_serialized)
+                .unwrap(),
         );
 
     let mut context = winter::Context::new(

@@ -1,9 +1,15 @@
 [package]
 name = "winter"
-version = "1.5.0-beta"
+version = "1.5.0"
 edition = "2021"
 description = "This is a glfw/opengl application"
 build = "build.rs"
+
+[[example]]
+name = "serde-framework"
+path = "examples/serde-framework/bin.rs"
+required-features = ["serde"]
+
 
 [[example]]
 name = "merge-framework"
@@ -40,12 +46,14 @@ path = "examples/key_callback-raw/bin.rs"
 [features]
 default = []
 raw = []
+serde = ["dep:serde","glmath/serde"]
 
 [dependencies]
 glfw = {version = "0.55.*"}
 bytemuck = {version = "1.*",features = ["must_cast","extern_crate_alloc"]}
-glmath ={ version = "0.1.*",features = ["bytemuck"],git = "https://github.com/fourrth/glmath.git"}
+glmath = { version = "0.1.*",features = ["bytemuck"],git = "https://github.com/fourrth/glmath.git",default-features = false}
 num-integer ={ version = "0.1.*"}
+serde ={ version = "1.0.*",optional = true,features = ["derive"]}
 
 [dev-dependencies]
 game_of_life = {path = "examples/game_of_life-framework/game_of_life"}

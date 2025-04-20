@@ -35,6 +35,11 @@ The following is a comprehensive list of all the features this crate offers:
 
 This feature simply switches everything off, other than the raw submodule of this crate
 
+### serde
+
+This feature allows you to use serde to export made objects.
+See the [serde-framework](examples/serde-framework/bin.rs) example for more information.
+
 ## Examples
 
 This crate uses examples to provide a good overview of what is possible with this crate. This includes more complete projects, along with some examples for starting projects
@@ -74,14 +79,7 @@ Not very complete, but has more features than snake:
    - Note this also provides the great feature that it will crash if you have not saved before trying to load a saved state
  - *KEY_LEFT* and *KEY_RIGHT* decrease and increase the generations per second respectively 
 
-### v1.5
-
-This update is currently almost complete with an estimated release of
-some time in the end of April 2025.
-This will make the crate more generic and it will
-allow more access to the inner workings of the framework.
-Not only that, serialization and deserialization will be completed
-so that one may export and import data from other sources.
+## Upcoming Versions of Note
 
 ### v2.0 and Beyond
 

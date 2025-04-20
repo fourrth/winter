@@ -198,14 +198,18 @@ impl<V: GLVertexType, I: GLIndexType, C: GLVertexType> Builder<V, I, C> {
         }
     }
     pub fn add(mut self, drawable: impl Drawable<V, I, C>) -> Self {
+        // maybe we should just keep track of it instead
+        // of doing division every time, but idk
+        let len: usize = self.vertex_data.data.len()
+            / (self.vertex_data.layout.attrib_len as usize)
+            / std::mem::size_of::<V>();
+
         self.vertex_data
             .data
             .extend(bytemuck::must_cast_slice::<_, u8>(drawable.get_vertices()));
         self.color_data
             .data
             .extend(bytemuck::must_cast_slice::<_, u8>(drawable.get_colors()));
-
-        let len: usize = self.index_data.len();
 
         //TODO: maybe make this smarter so we don't always allocate
         let tmp_data = drawable

@@ -5,8 +5,8 @@
 //! manipulated, and otherwise modified when
 //! creating your mesh
 //!
-//! Every construct implements Into<Component<>>
-//! Which then implements [`Drawable`]
+//! Every construct implements [`super::IntoDrawable`]
+//! Which then implements [`super::Drawable`]
 
 use std::marker::PhantomData;
 
@@ -16,7 +16,8 @@ use crate::opengl::{GLIndexType, GLVertexType};
 
 use super::{primitives::Component, shapes, IndexGrid, IntoDrawable};
 /// Basic one color triangles
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TriangleSolidColor<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element>
 {
     pub data: shapes::Triangle<V>,
@@ -70,7 +71,8 @@ impl<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element> IntoD
 }
 
 /// Basic one colored rectanlges or just two triangles together via specified points
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RectangleSolidColor<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element>
 {
     pub rect: shapes::Rectangle<V>,
@@ -147,6 +149,7 @@ impl<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element> IntoD
 /// A grid of squares or pixels which are individually colored, but
 /// entirely that color (so similar to many of [`PlaneSolidColor`])
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PixelGridSolidColorIndividual<
     V: GLVertexType + Element,
     I: GLIndexType,
@@ -302,11 +305,15 @@ impl<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element>
                     pair.1,
                 )
             });
-            // LOG POINT
-            // std::hint::black_box(&r);
 
             shapes::Rectangle::from(r)
         })
+    }
+
+    pub fn get_pixels_iter(&self) -> impl Iterator<Item = RectangleSolidColor<V, I, C>> + '_ {
+        self.get_position_iter()
+            .zip(self.pixel_color_iter())
+            .map(|(rect, color)| RectangleSolidColor::new1(rect, color))
     }
 }
 impl<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element> IntoDrawable<V, I, C>

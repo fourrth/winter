@@ -1,10 +1,9 @@
+use crate::opengl::GLVertexType;
 use bytemuck::{Pod, Zeroable};
 use glmath::{
     vector::{Vector3, Vector4},
     Element,
 };
-
-use crate::opengl::GLVertexType;
 
 //TODO: change this when glmath updates
 fn vector4_to_vector3<T: Element>(v: Vector4<T>) -> Vector3<T> {
@@ -22,6 +21,7 @@ pub trait Translate<V: GLVertexType + Element> {
 
 #[repr(C, packed)]
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Triangle<V: GLVertexType + Element> {
     pub bottom_left: Vector3<V>,
     pub bottom_right: Vector3<V>,
@@ -72,9 +72,9 @@ impl<V: GLVertexType + Element> Translate<V> for Triangle<V> {
         }
     }
 }
-
 #[repr(C, packed)]
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Triangle4D<V: GLVertexType + Element> {
     pub bottom_left: Vector4<V>,
     pub bottom_right: Vector4<V>,
@@ -125,9 +125,9 @@ unsafe impl<V: GLVertexType + Element> Zeroable for Triangle4D<V> {
         }
     }
 }
-
 #[repr(C, packed)]
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Rectangle<V: GLVertexType + Element> {
     pub bottom_left_corner: Vector3<V>,
     pub bottom_right_corner: Vector3<V>,
@@ -206,9 +206,9 @@ impl<V: GLVertexType + Element> Translate<V> for Rectangle<V> {
         }
     }
 }
-
 #[repr(C, packed)]
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Rectangle4D<V: GLVertexType + Element> {
     pub bottom_left_corner: Vector4<V>,
     pub bottom_right_corner: Vector4<V>,
