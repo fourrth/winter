@@ -9,10 +9,13 @@ use std::{
     time::{Duration, Instant},
 };
 
-use glmath::vector::Vector2;
+use glmath::vector::Vector3;
 use snake::{Coordinate, Direction};
-use winter::{bindings, vao::VertexArrayObject, NonZeroUInt};
-use winter::{common, primitives};
+use winter::vao::VertexArrayObject;
+use winter::{
+    bindings,
+    vao::simple::{self, IntoDrawable},
+};
 
 #[inline(always)]
 fn clamp_pos(num: f32) -> f32 {
@@ -69,18 +72,39 @@ fn main() {
 
     const ARENA_CELL_LENGTH: usize = 30;
 
-    let color_snake_head = primitives::Color::from_rgb(0, 255, 255);
-    let color_snake_body = primitives::Color::from_rgb(255, 255, 255);
-    let color_snake_empty = primitives::Color::from_rgb(0, 0, 255);
-    let color_snake_food = primitives::Color::from_rgb(255, 0, 0);
+    let color_snake_head = Vector3::from([0.0, 1.0, 1.0]);
+    let color_snake_body = Vector3::from([1.0, 1.0, 1.0]);
+    let color_snake_empty = Vector3::from([0.0, 0.0, 1.0]);
+    let color_snake_food = Vector3::from([1.0, 0.0, 0.0]);
 
-    let vao_builder = common::create_grid(
-        Vector2::from([-1.; 2]).add(Vector2::from([0.1; 2])),
-        Vector2::from([1.; 2]).sub(Vector2::from([0.1; 2])),
-        NonZeroUInt::new(ARENA_CELL_LENGTH as u32).unwrap(),
-        NonZeroUInt::new(ARENA_CELL_LENGTH as u32).unwrap(),
-        0.,
-        |_, _, _| color_snake_empty,
+    let color_data = Box::from([
+        color_snake_body,
+        color_snake_body,
+        color_snake_empty,
+        color_snake_food,
+    ]);
+
+    let index_grid: simple::IndexGrid<u32> = {
+        let width = ARENA_CELL_LENGTH;
+        let height = ARENA_CELL_LENGTH;
+        simple::IndexGrid::new(
+            width,
+            height,
+            (0..(width * height) as u32).map(|_| 2).collect(),
+        )
+        .unwrap()
+    };
+
+    let grid_bounds = simple::shapes::Rectangle::new(
+        Vector3::from([-1.0, -1.0, 0.0]).mul_scalar(0.95),
+        Vector3::from([1.0, -1.0, 0.0]).mul_scalar(0.95),
+        Vector3::from([1.0, 1.0, 0.0]).mul_scalar(0.95),
+        Vector3::from([-1.0, 1.0, 0.0]).mul_scalar(0.95),
+    );
+
+    let vao_builder = simple::Builder::create().add(
+        simple::constructs::PixelGridSolidColorIndividual::new(grid_bounds, index_grid, color_data)
+            .into_drawable(),
     );
 
     let mut context = winter::Context::new(
@@ -140,7 +164,6 @@ fn main() {
     )));
 
     context.program.enable();
-    context.vao.bind();
 
     let snake_context_1 = Arc::clone(&snake_context);
 
@@ -236,7 +259,7 @@ fn main() {
 
                 if let Ok(cxt) = snake_context.lock() {
                     let mut updater = context.vao.update_color_component();
-                    let data = bytemuck::cast_slice_mut::<f32, [[f32; 3]; 6]>(updater.data_mut());
+                    let data = bytemuck::cast_slice_mut::<f32, [[f32; 3]; 4]>(updater.data_mut());
                     // 1 point = 3 f32
                     // 1 tri = 3 points
                     // 1 rect = 2 tri
@@ -252,7 +275,7 @@ fn main() {
                         };
 
                         for p in data[cx].iter_mut() {
-                            *p = c.0 .0;
+                            *p = c.0;
                         }
                     }
                     // updater will write when dropped

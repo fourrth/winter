@@ -8,7 +8,7 @@ use num_integer::Integer;
 
 use crate::bindings::types::*;
 
-const OPENGL_TYPES: &[GLenum] = &[
+pub const OPENGL_TYPES: &[GLenum] = &[
     0x1400, // GL_BYTE
     0x1401, // GL_UNSIGNED_BYTE
     0x1402, // GL_SHORT
@@ -18,7 +18,7 @@ const OPENGL_TYPES: &[GLenum] = &[
     0x1406, // GL_FLOAT
 ];
 
-const OPENGL_TYPES_SIZES: &[usize] = &[
+pub const OPENGL_TYPES_SIZES: &[usize] = &[
     std::mem::size_of::<GLbyte>(),   // GL_BYTE
     std::mem::size_of::<GLubyte>(),  // GL_UNSIGNED_BYTE
     std::mem::size_of::<GLshort>(),  // GL_SHORT
@@ -86,39 +86,83 @@ impl GLIndexType for GLuint {
 
 pub trait GLVertexType: Pod + Debug {
     fn to_glenum() -> GLenum;
+    fn from_usize(value: usize) -> Self;
+    fn to_usize(self) -> usize;
 }
 impl GLVertexType for GLbyte {
     fn to_glenum() -> GLenum {
         0x1400 // GL_BYTE
+    }
+    fn from_usize(value: usize) -> Self {
+        value as Self
+    }
+    fn to_usize(self) -> usize {
+        self as usize
     }
 }
 impl GLVertexType for GLubyte {
     fn to_glenum() -> GLenum {
         0x1401 // GL_UNSIGNED_BYTE
     }
+    fn from_usize(value: usize) -> Self {
+        value as Self
+    }
+    fn to_usize(self) -> usize {
+        self as usize
+    }
 }
 impl GLVertexType for GLshort {
     fn to_glenum() -> GLenum {
         0x1402 // GL_SHORT
+    }
+    fn from_usize(value: usize) -> Self {
+        value as Self
+    }
+    fn to_usize(self) -> usize {
+        self as usize
     }
 }
 impl GLVertexType for GLushort {
     fn to_glenum() -> GLenum {
         0x1403 // GL_UNSIGNED_SHORT
     }
+    fn from_usize(value: usize) -> Self {
+        value as Self
+    }
+    fn to_usize(self) -> usize {
+        self as usize
+    }
 }
 impl GLVertexType for GLint {
     fn to_glenum() -> GLenum {
         0x1404 // GL_INT
+    }
+    fn from_usize(value: usize) -> Self {
+        value as Self
+    }
+    fn to_usize(self) -> usize {
+        self as usize
     }
 }
 impl GLVertexType for GLuint {
     fn to_glenum() -> GLenum {
         0x1405 // GL_UNSIGNED_INT
     }
+    fn from_usize(value: usize) -> Self {
+        value as Self
+    }
+    fn to_usize(self) -> usize {
+        self as usize
+    }
 }
 impl GLVertexType for GLfloat {
     fn to_glenum() -> GLenum {
         0x1406 // GL_FLOAT
+    }
+    fn from_usize(value: usize) -> Self {
+        value as Self
+    }
+    fn to_usize(self) -> usize {
+        self as usize
     }
 }

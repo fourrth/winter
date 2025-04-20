@@ -1,6 +1,6 @@
 mod window;
 
-use std::ffi::CString;
+use std::{ffi::CString, mem::ManuallyDrop};
 
 use glfw::ffi::GLFWkeyfun;
 
@@ -12,9 +12,9 @@ use crate::{
 use self::window::{main_context_keyboard_input, GlfwInputFunction, Window, USER_KEY_FUNC};
 
 pub struct Context<VAO: VertexArrayObject> {
-    pub window: Window,
-    pub program: Program,
-    pub vao: VAO,
+    pub window: ManuallyDrop<Window>,
+    pub program: ManuallyDrop<Program>,
+    pub vao: ManuallyDrop<VAO>,
 }
 impl<VAO: VertexArrayObject> Context<VAO> {
     pub fn new<VAOD: VertexArrayObjectData<VAO = VAO>>(
@@ -42,9 +42,18 @@ impl<VAO: VertexArrayObject> Context<VAO> {
             }
         }
         Ok(Self {
-            window,
-            program,
-            vao: vertex_array_object_data.build(),
+            window: ManuallyDrop::new(window),
+            program: ManuallyDrop::new(program),
+            vao: ManuallyDrop::new(vertex_array_object_data.build()),
         })
+    }
+}
+impl<VAO: VertexArrayObject> Drop for Context<VAO> {
+    fn drop(&mut self) {
+        unsafe {
+            ManuallyDrop::drop(&mut self.vao);
+            ManuallyDrop::drop(&mut self.program);
+            ManuallyDrop::drop(&mut self.window);
+        }
     }
 }

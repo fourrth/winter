@@ -52,15 +52,16 @@ impl<V: GLVertexType, I: GLIndexType, C: GLVertexType> Component<V, I, C> {
         data.extend(bytemuck::cast_slice::<_, u8>(&i_data));
 
         // LOG POINT
-        // let vertex_data_tmp_compare = bytemuck::cast_slice::<u8, V>(&data[0..v_size]);
-        // let color_data_tmp_compare = bytemuck::cast_slice::<u8, C>(&data[v_size..v_size + c_size]);
-        // let index_data_tmp_compare = bytemuck::cast_slice::<u8, I>(&data[v_size + c_size..]);
+        let vertex_data_tmp_compare = bytemuck::cast_slice::<u8, [V; 3]>(&data[0..v_size]);
+        let color_data_tmp_compare =
+            bytemuck::cast_slice::<u8, [C; 3]>(&data[v_size..v_size + c_size]);
+        let index_data_tmp_compare = bytemuck::cast_slice::<u8, [I; 6]>(&data[v_size + c_size..]);
 
-        // std::hint::black_box((
-        //     vertex_data_tmp_compare,
-        //     color_data_tmp_compare,
-        //     index_data_tmp_compare,
-        // ));
+        std::hint::black_box((
+            vertex_data_tmp_compare,
+            color_data_tmp_compare,
+            index_data_tmp_compare,
+        ));
 
         Self {
             data: data.into_boxed_slice(),
@@ -225,7 +226,6 @@ impl<V: GLVertexType, I: GLIndexType, C: GLVertexType> Component<V, I, C> {
         }
     }
 }
-
 impl<V: GLVertexType, I: GLIndexType, C: GLVertexType> Drawable<V, I, C> for Component<V, I, C> {
     fn get_vertices(&self) -> &[V] {
         self.get_vertices()

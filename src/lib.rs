@@ -21,8 +21,6 @@ pub use context::*;
 #[cfg(not(feature = "raw"))]
 pub mod common;
 
-type Float = f32;
-
 #[cfg(target_pointer_width = "64")]
 pub type NonZeroUInt = std::num::NonZeroU32;
 

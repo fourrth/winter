@@ -49,6 +49,30 @@ use crate::{
 
 use super::{VertexArrayObject, VertexArrayObjectData};
 
+//TODO: find a place to put this that makes sense
+pub struct IndexGrid<I> {
+    pub width: usize,
+    pub height: usize,
+    pub indices: Vec<I>,
+}
+impl<I> IndexGrid<I> {
+    /// Create new grid
+    ///
+    /// Returns None if:
+    /// `indices.len() != width * height`
+    pub fn new(width: usize, height: usize, indices: Vec<I>) -> Option<Self> {
+        if indices.len() != width * height {
+            None
+        } else {
+            Some(Self {
+                width,
+                height,
+                indices,
+            })
+        }
+    }
+}
+
 #[derive(Debug)]
 struct Guard {
     inner: NonZeroUInt,
@@ -91,6 +115,13 @@ pub struct Vao<V: GLVertexType, I: GLIndexType, C: GLVertexType> {
     _cb: PhantomData<C>,
 }
 
+impl<'a, V: GLVertexType, I: GLIndexType, C: GLVertexType> Drop for Vao<V, I, C> {
+    fn drop(&mut self) {
+        unsafe {
+            bindings::BindVertexArray(0);
+        }
+    }
+}
 impl<'a, V: GLVertexType, I: GLIndexType, C: GLVertexType> Vao<V, I, C> {
     /// This gives you a &mut to the position data.
     /// You can then modify this reference and
@@ -187,11 +218,12 @@ impl<V: GLVertexType, I: GLIndexType, C: GLVertexType> Builder<V, I, C> {
             .data
             .extend(bytemuck::must_cast_slice::<_, u8>(&tmp_data));
 
-        //LOG POINT
-        let vertex_data_tmp = bytemuck::cast_slice::<u8, [V; 3]>(&self.vertex_data.data);
-        let color_data_tmp = bytemuck::cast_slice::<u8, [C; 3]>(&self.color_data.data);
-        let index_data_tmp = bytemuck::cast_slice::<u8, I>(&self.index_data.data);
-        std::hint::black_box((vertex_data_tmp, color_data_tmp, index_data_tmp));
+        // LOG POINT
+
+        // let vertex_data_tmp = bytemuck::cast_slice::<u8, [V; 3]>(&self.vertex_data.data);
+        // let color_data_tmp = bytemuck::cast_slice::<u8, [C; 3]>(&self.color_data.data);
+        // let index_data_tmp = bytemuck::cast_slice::<u8, I>(&self.index_data.data);
+        // std::hint::black_box((vertex_data_tmp, color_data_tmp, index_data_tmp));
 
         self
     }

@@ -8,9 +8,14 @@ use std::{
 };
 
 use game_of_life::Context;
-use glmath::{vector::Vector2, Element};
-use winter::{bindings, vao::VertexArrayObject, NonZeroUInt};
-use winter::{common, primitives};
+use glmath::{vector::Vector3, Element};
+use winter::{
+    bindings,
+    vao::{
+        simple::{self, IntoDrawable},
+        VertexArrayObject,
+    },
+};
 
 const SAVE_FILE_OUTPUT_DIR: &str = "./target/save_data.txt";
 const DEFAULT_TPS: u64 = 10;
@@ -130,11 +135,11 @@ fn main() -> Result<(), String> {
         };
 
         let arena_size = if let Some(arena_size_) = args.get(2) {
-            if let Ok(arena_size_) = arena_size_.parse::<u32>() {
+            if let Ok(arena_size_) = arena_size_.parse::<usize>() {
                 arena_size_
             } else {
                 println!("Inputted arena_size Unknown: using 50");
-                800
+                50
             }
         } else {
             println!("Inputted arena_size Unknown: using 50");
@@ -153,16 +158,32 @@ fn main() -> Result<(), String> {
         )
     };
 
-    let color_alive = primitives::Color::from_rgb(0, 255, 255);
-    let color_dead = primitives::Color::from_rgb(0, 0, 255);
+    let color_alive = Vector3::from([0.0, 1.0, 1.0]);
+    let color_dead = Vector3::from([0.0, 0.0, 1.0]);
 
-    let vao_builder = common::create_grid(
-        Vector2::from([-1.; 2]).add(Vector2::from([0.1; 2])),
-        Vector2::from([1.; 2]).sub(Vector2::from([0.1; 2])),
-        NonZeroUInt::new(arena_size as u32).unwrap(),
-        NonZeroUInt::new(arena_size as u32).unwrap(),
-        0.,
-        |_, _, _| color_dead,
+    let color_data = Box::from([color_alive, color_dead]);
+
+    let index_grid: simple::IndexGrid<u32> = {
+        let width = arena_size;
+        let height = arena_size;
+        simple::IndexGrid::new(
+            width,
+            height,
+            (0..(width * height) as u32).map(|_| 1).collect(),
+        )
+        .unwrap()
+    };
+
+    let grid_bounds = simple::shapes::Rectangle::new(
+        Vector3::from([-1.0, -1.0, 0.0]).mul_scalar(0.95),
+        Vector3::from([1.0, -1.0, 0.0]).mul_scalar(0.95),
+        Vector3::from([1.0, 1.0, 0.0]).mul_scalar(0.95),
+        Vector3::from([-1.0, 1.0, 0.0]).mul_scalar(0.95),
+    );
+
+    let vao_builder = simple::Builder::create().add(
+        simple::constructs::PixelGridSolidColorIndividual::new(grid_bounds, index_grid, color_data)
+            .into_drawable(),
     );
 
     // pretty sure I have said this before, but this should really all be
@@ -320,7 +341,7 @@ fn main() -> Result<(), String> {
 
             if let Some(cxt) = &mut GOL_CXT {
                 let mut updater = context.vao.update_color_component();
-                let data = bytemuck::cast_slice_mut::<f32, [[f32; 3]; 6]>(updater.data_mut());
+                let data = bytemuck::cast_slice_mut::<f32, [[f32; 3]; 4]>(updater.data_mut());
 
                 generation_count = cxt.cnt;
                 for (cx, cell) in cxt.get_data().into_iter().enumerate() {
@@ -334,7 +355,7 @@ fn main() -> Result<(), String> {
                         }
                     };
                     for p in data[cx].iter_mut() {
-                        *p = c.0 .0;
+                        *p = c.0;
                     }
                 }
             }
