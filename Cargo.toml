@@ -1,66 +1,8 @@
-[package]
-name = "winter"
-version = "1.5.0"
-edition = "2021"
-description = "This is a glfw/opengl application"
-build = "build.rs"
+[workspace]
+members = [
+    "crates/core",
+    "crates/backend/simple",
+    "crates/frontend/main",
+]
 
-[[example]]
-name = "serde-framework"
-path = "examples/serde-framework/bin.rs"
-required-features = ["serde"]
-
-
-[[example]]
-name = "merge-framework"
-path = "examples/merge-framework/bin.rs"
-
-[[example]]
-name = "snake-framework"
-path = "examples/snake-framework/bin.rs"
-
-[[example]]
-name = "game_of_life-framework"
-path = "examples/game_of_life-framework/bin.rs"
-
-[[example]]
-name = "colorchanger-framework"
-path = "examples/colorchanger-framework/bin.rs"
-
-[[example]]
-name = "colorchanger-raw"
-path = "examples/colorchanger-raw/bin.rs"
-
-[[example]]
-name = "window-raw"
-path = "examples/window-raw/bin.rs"
-
-[[example]]
-name = "simple-raw"
-path = "examples/simple-raw/bin.rs"
-
-[[example]]
-name = "key_callback-raw"
-path = "examples/key_callback-raw/bin.rs"
-
-[features]
-default = []
-raw = []
-serde = ["dep:serde","glmath/serde"]
-
-[dependencies]
-glfw = {version = "0.55.*"}
-bytemuck = {version = "1.*",features = ["must_cast","extern_crate_alloc"]}
-glmath = { version = "0.1.*",features = ["bytemuck"],git = "https://github.com/fourrth/glmath.git",default-features = false}
-num-integer ={ version = "0.1.*"}
-serde ={ version = "1.0.*",optional = true,features = ["derive"]}
-
-[dev-dependencies]
-game_of_life = {path = "examples/game_of_life-framework/game_of_life"}
-snake ={ path = "examples/snake-framework/snake"}
-once_cell = {version = "1.19.*"}
-rand = {version = "0.8.*"}
-serde_json = {version = "1.0.*"}
-
-[build-dependencies]
-gl_generator = { version = "0.14.*"}
+resolver = "2"

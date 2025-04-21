@@ -1,0 +1,64 @@
+[package]
+name = "winter"
+version = "1.6.0-alpha"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+crate-type = ["lib"]
+
+
+[[example]]
+name = "serde-framework"
+path = "examples/serde-framework/bin.rs"
+required-features = ["serde"]
+
+[[example]]
+name = "merge-framework"
+path = "examples/merge-framework/bin.rs"
+
+[[example]]
+name = "snake-framework"
+path = "examples/snake-framework/bin.rs"
+
+[[example]]
+name = "game_of_life-framework"
+path = "examples/game_of_life-framework/bin.rs"
+
+[[example]]
+name = "colorchanger-framework"
+path = "examples/colorchanger-framework/bin.rs"
+
+[[example]]
+name = "colorchanger-raw"
+path = "examples/colorchanger-raw/bin.rs"
+
+[[example]]
+name = "window-raw"
+path = "examples/window-raw/bin.rs"
+
+[[example]]
+name = "simple-raw"
+path = "examples/simple-raw/bin.rs"
+
+[[example]]
+name = "key_callback-raw"
+path = "examples/key_callback-raw/bin.rs"
+
+
+[features]
+default = []
+serde = ["winter-simple/serde"]
+
+[dependencies]
+winter-simple ={ version = "1.6.0-alpha",path = "../../backend/simple"}
+glfw = {version = "0.55"}
+
+[dev-dependencies]
+game_of_life = {path = "examples/game_of_life-framework/game_of_life"}
+snake ={ path = "examples/snake-framework/snake"}
+once_cell = {version = "1.19"}
+rand = {version = "0.8"}
+serde_json = {version = "1.0"}
+glmath = { version = "0.1",git = "https://github.com/fourrth/glmath.git"}
+bytemuck = {version = "1.*",features = ["must_cast"]}

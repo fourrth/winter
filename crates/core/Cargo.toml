@@ -1,0 +1,19 @@
+[package]
+name = "winter-core"
+version = "1.6.0-alpha"
+edition = "2021"
+build = "build.rs"
+
+[lib]
+path = "src/lib.rs"
+crate-type = ["lib"]
+
+[features]
+default = []
+
+[dependencies]
+num-integer ={ version = "0.1.*"}
+bytemuck = {version = "1.*"}
+
+[build-dependencies]
+gl_generator = { version = "0.14.*"}

@@ -9,8 +9,8 @@
 !examples
 !examples/**
 
-!src
-!src/**
+!crates
+!crates/**
 
 !README.md
 !LICENSE-MIT
