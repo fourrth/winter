@@ -9,8 +9,8 @@ use std::{
 
 use glmath::{vector::Vector3, Element};
 use winter::context::Context;
-use winter_core::{bindings, vao::VertexArrayObject};
-use winter_simple::{constructs, shapes, Builder, IndexGrid, IntoDrawable};
+use winter_core::bindings;
+use winter_simple::{constructs, shapes, Builder, IndexGrid, IntoDrawable, VertexArrayObject};
 const SAVE_FILE_OUTPUT_DIR: &str = "./target/save_data.txt";
 const DEFAULT_TPS: u64 = 10;
 
@@ -175,7 +175,7 @@ fn main() -> Result<(), String> {
         Vector3::from([-1.0, 1.0, 0.0]).mul_scalar(0.95),
     );
 
-    let vao_builder: Builder<f32, u32, f32, 3> = Builder::create().add(
+    let vao_builder: Builder<f32, u32, f32, 3, false> = Builder::create().add(
         constructs::PixelGridSolidColorIndividual::new(grid_bounds, index_grid, color_data)
             .into_drawable(),
     );

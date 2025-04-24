@@ -1,12 +1,13 @@
 use glmath::vector::Vector3;
 use std::{ffi::CString, time::Instant};
 use winter::context::Context;
-use winter_core::{bindings, vao::VertexArrayObject};
+use winter_core::bindings;
 use winter_simple::{
     constructs,
     shapes::{self, Translate},
-    Builder, IndexGrid, IntoDrawable,
+    Builder, IndexGrid, IntoDrawable, VertexArrayObject,
 };
+
 fn main() -> Result<(), String> {
     let width = 800;
     let height = 800;
@@ -47,7 +48,7 @@ fn main() -> Result<(), String> {
         .unwrap()
     };
 
-    let vao_builder: Builder<f32, u32, f32, 3> = Builder::create()
+    let vao_builder: Builder<f32, u32, f32, 3, false> = Builder::create()
         .add(
             constructs::PixelGridSolidColorIndividual::new(position, index_grid, color_data)
                 .into_drawable(),

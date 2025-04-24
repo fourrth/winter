@@ -12,8 +12,8 @@ use std::{
 use glmath::vector::Vector3;
 use snake::{Coordinate, Direction};
 use winter::context::Context;
-use winter_core::{bindings, vao::VertexArrayObject};
-use winter_simple::{constructs, shapes, IndexGrid, IntoDrawable};
+use winter_core::bindings;
+use winter_simple::{constructs, shapes, IndexGrid, IntoDrawable, VertexArrayObject};
 
 #[inline(always)]
 fn clamp_pos(num: f32) -> f32 {
@@ -100,8 +100,8 @@ fn main() {
         Vector3::from([-1.0, 1.0, 0.0]).mul_scalar(0.95),
     );
 
-    let vao_builder: winter_simple::Builder<f32, u32, f32, 3> = winter_simple::Builder::create()
-        .add(
+    let vao_builder: winter_simple::Builder<f32, u32, f32, 3, false> =
+        winter_simple::Builder::create().add(
             constructs::PixelGridSolidColorIndividual::new(grid_bounds, index_grid, color_data)
                 .into_drawable(),
         );
@@ -244,7 +244,7 @@ fn main() {
     unsafe {
         let stdout = io::stdout();
 
-        let mut writer = BufWriter::new(stdout.lock());
+        let mut writer: BufWriter<io::StdoutLock<'static>> = BufWriter::new(stdout.lock());
 
         let mut start = Instant::now();
 

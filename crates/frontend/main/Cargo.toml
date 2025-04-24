@@ -1,6 +1,6 @@
 [package]
 name = "winter"
-version = "1.6.1"
+version = "1.6.2"
 edition = "2021"
 
 [lib]
@@ -45,4 +45,3 @@ game_of_life = {workspace = true}
 snake ={workspace = true}
 serde_json = {version = "1.0"}
 once_cell = {version = "1.19"}
-# rand = {version = "0.8"}

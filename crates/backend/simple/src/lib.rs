@@ -35,12 +35,15 @@ pub mod shapes;
 pub mod updater;
 pub use updater::*;
 
+pub use glmath;
+pub use winter_core::vao::VertexArrayObject;
+
 use winter_core::{
     bindings::{self, types::GLint},
     buffer::{index, vertex, ElementArrayBuffer, VertexBuffer},
     opengl::{GLIndexType, GLVertexType},
     raw,
-    vao::{VertexArrayObject, VertexArrayObjectData},
+    vao::VertexArrayObjectData,
     NonZeroUInt,
 };
 
@@ -104,10 +107,10 @@ pub trait IntoDrawable<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L
 
 /// Note L is the attrib len for both pos and color
 #[derive(Debug)]
-pub struct Vao<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> {
+pub struct Vao<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint, const N: bool> {
     id: Guard,
-    position_vb: vertex::DynamicBuffer<V, L>,
-    color_vb: vertex::DynamicBuffer<C, L>,
+    position_vb: vertex::DynamicBuffer<V, L, N>,
+    color_vb: vertex::DynamicBuffer<C, L, N>,
     index_buffer: index::IndexBuffer,
 
     _pb: PhantomData<V>,
@@ -115,8 +118,8 @@ pub struct Vao<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint>
     _cb: PhantomData<C>,
 }
 
-impl<'a, V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> Drop
-    for Vao<V, I, C, L>
+impl<'a, V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint, const N: bool> Drop
+    for Vao<V, I, C, L, N>
 {
     fn drop(&mut self) {
         unsafe {
@@ -124,7 +127,9 @@ impl<'a, V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> Drop
         }
     }
 }
-impl<'a, V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> Vao<V, I, C, L> {
+impl<'a, V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint, const N: bool>
+    Vao<V, I, C, L, N>
+{
     /// This gives you a &mut to the position data.
     /// You can then modify this reference and
     /// when you drop the reference,
@@ -143,8 +148,8 @@ impl<'a, V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> Vao<V
     }
 }
 
-impl<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> VertexArrayObject
-    for Vao<V, I, C, L>
+impl<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint, const N: bool>
+    VertexArrayObject for Vao<V, I, C, L, N>
 {
     fn bind(&self) {
         unsafe { bindings::BindVertexArray(self.id.inner.into()) };
@@ -165,7 +170,8 @@ impl<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> VertexArr
 }
 
 #[derive(Debug)]
-pub struct Builder<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> {
+pub struct Builder<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint, const N: bool>
+{
     vertex_data: vertex::DynamicData<V, L>,
     index_data: index::IndexBufferData,
     color_data: vertex::DynamicData<C, L>,
@@ -175,7 +181,9 @@ pub struct Builder<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GL
     _cb: PhantomData<C>,
 }
 
-impl<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> Builder<V, I, C, L> {
+impl<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint, const N: bool>
+    Builder<V, I, C, L, N>
+{
     pub fn create() -> Self {
         Self {
             vertex_data: vertex::DynamicData::new::<V>(
@@ -231,10 +239,10 @@ impl<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> Builder<V
     }
 }
 
-impl<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> VertexArrayObjectData
-    for Builder<V, I, C, L>
+impl<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint, const N: bool>
+    VertexArrayObjectData for Builder<V, I, C, L, N>
 {
-    type VAO = Vao<V, I, C, L>;
+    type VAO = Vao<V, I, C, L, N>;
     fn build(self) -> Self::VAO {
         let id = unsafe {
             let mut id: u32 = 0;
@@ -247,7 +255,7 @@ impl<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> VertexArr
         let color_vb = vertex::DynamicBuffer::from(self.color_data);
         let index_buffer = index::IndexBuffer::from(self.index_data);
 
-        let vao: Vao<V, I, C, L> = Vao {
+        let vao: Vao<V, I, C, L, N> = Vao {
             id: Guard {
                 inner: NonZeroUInt::new(id).unwrap(),
             },

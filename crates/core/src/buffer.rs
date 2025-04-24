@@ -1,5 +1,8 @@
 use crate::{
-    bindings::{self, types::GLint},
+    bindings::{
+        self,
+        types::{GLboolean, GLint},
+    },
     opengl::GLVertexType,
     vao::VertexArrayObject,
     NonZeroUInt,
@@ -22,7 +25,7 @@ impl Drop for Guard {
     }
 }
 
-pub trait VertexBuffer<V: GLVertexType, const L: GLint> {
+pub trait VertexBuffer<V: GLVertexType, const L: GLint, const N: bool> {
     /// Get internal gl id
     fn id(&self) -> NonZeroUInt;
     /// Get the layout of the data
@@ -42,7 +45,7 @@ pub trait VertexBuffer<V: GLVertexType, const L: GLint> {
                 self.layout().attrib_loc,
                 L,
                 V::to_glenum(),
-                bindings::FALSE,
+                N as GLboolean,
                 0,
                 std::ptr::null_mut::<c_void>(),
             );

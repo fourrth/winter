@@ -43,12 +43,12 @@ impl<V: GLVertexType, const L: GLint> StaticData<V, L> {
 
 /// VertexBuffer meant for static data with infrequent updates.
 #[derive(Debug)]
-pub struct StaticBuffer<V: GLVertexType, const L: GLint> {
+pub struct StaticBuffer<V: GLVertexType, const L: GLint, const N: bool> {
     id: Guard,
     layout: Layout<V, L>,
 }
 
-impl<V: GLVertexType, const L: GLint> StaticBuffer<V, L> {
+impl<V: GLVertexType, const L: GLint, const N: bool> StaticBuffer<V, L, N> {
     /// Convert's your data into a useable OpenGL object
     pub fn from(data: StaticData<V, L>) -> Self {
         let id = unsafe {
@@ -70,7 +70,7 @@ impl<V: GLVertexType, const L: GLint> StaticBuffer<V, L> {
 
     /// Converts static VertexBuffer to a dynamic one
     /// for frequent writes
-    pub fn to_dynamic(self) -> DynamicBuffer<V, L> {
+    pub fn to_dynamic(self) -> DynamicBuffer<V, L, N> {
         // It should be possible to copy the data
         // from OpenGL to get it back on the cpu side
         // not important now but might be nice later on
@@ -78,7 +78,9 @@ impl<V: GLVertexType, const L: GLint> StaticBuffer<V, L> {
     }
 }
 
-impl<V: GLVertexType, const L: GLint> VertexBuffer<V, L> for StaticBuffer<V, L> {
+impl<V: GLVertexType, const L: GLint, const N: bool> VertexBuffer<V, L, N>
+    for StaticBuffer<V, L, N>
+{
     fn id(&self) -> NonZeroUInt {
         self.id.inner
     }

@@ -2,11 +2,11 @@ use glmath::vector::Vector3;
 use once_cell::sync::Lazy;
 use std::{collections::HashMap, ffi::CString};
 use winter::context::Context;
-use winter_core::{bindings, vao::VertexArrayObject};
+use winter_core::bindings;
 use winter_simple::{
     constructs,
     shapes::{self, Translate},
-    Builder, IntoDrawable,
+    Builder, IntoDrawable, VertexArrayObject,
 };
 #[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Hash)]
 pub enum DrawKind {
@@ -99,7 +99,7 @@ fn main() -> Result<(), String> {
     let tri_left_comp = constructs::TriangleSolidColor::new1(tri_left, color1).into_drawable();
     let tri_right_comp = constructs::TriangleSolidColor::new1(tri_right, color2).into_drawable();
 
-    let mut vao_builder: Builder<f32, u32, f32, 3> = Builder::create();
+    let mut vao_builder: Builder<f32, u32, f32, 3, false> = Builder::create();
     match kind {
         DrawKind::Square => {
             vao_builder = vao_builder

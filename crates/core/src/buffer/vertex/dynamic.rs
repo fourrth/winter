@@ -38,13 +38,13 @@ impl<V: GLVertexType, const L: GLint> DynamicData<V, L> {
 
 /// This is the main VertexBuffer type for dynamic vbs
 #[derive(Debug)]
-pub struct DynamicBuffer<V: GLVertexType, const L: GLint> {
+pub struct DynamicBuffer<V: GLVertexType, const L: GLint, const N: bool> {
     data: DynamicData<V, L>,
     // OpenGL id
     id: Guard,
 }
 
-impl<V: GLVertexType, const L: GLint> DynamicBuffer<V, L> {
+impl<V: GLVertexType, const L: GLint, const N: bool> DynamicBuffer<V, L, N> {
     /// Convert's your data into a useable OpenGL object
     pub fn from(data: DynamicData<V, L>) -> Self {
         let id: NonZeroUInt = unsafe {
@@ -88,7 +88,9 @@ impl<V: GLVertexType, const L: GLint> DynamicBuffer<V, L> {
     }
 }
 
-impl<V: GLVertexType, const L: GLint> VertexBuffer<V, L> for DynamicBuffer<V, L> {
+impl<V: GLVertexType, const L: GLint, const N: bool> VertexBuffer<V, L, N>
+    for DynamicBuffer<V, L, N>
+{
     fn id(&self) -> NonZeroUInt {
         self.id.inner
     }

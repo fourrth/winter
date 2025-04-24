@@ -2,3 +2,4 @@
 
 pub mod context;
 pub mod shader;
+pub use glfw;
