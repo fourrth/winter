@@ -37,10 +37,7 @@ pub use updater::*;
 
 use winter_core::{
     bindings::{self, types::GLint},
-    buffer::{
-        IndexBuffer, IndexBufferData, IndexBufferT, Layout, VertexBufferDynamic,
-        VertexBufferDynamicData, VertexBufferT,
-    },
+    buffer::{index, vertex, ElementArrayBuffer, VertexBuffer},
     opengl::{GLIndexType, GLVertexType},
     raw,
     vao::{VertexArrayObject, VertexArrayObjectData},
@@ -109,9 +106,9 @@ pub trait IntoDrawable<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L
 #[derive(Debug)]
 pub struct Vao<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> {
     id: Guard,
-    position_vb: VertexBufferDynamic<V, L>,
-    color_vb: VertexBufferDynamic<C, L>,
-    index_buffer: IndexBuffer,
+    position_vb: vertex::DynamicBuffer<V, L>,
+    color_vb: vertex::DynamicBuffer<C, L>,
+    index_buffer: index::IndexBuffer,
 
     _pb: PhantomData<V>,
     _ib: PhantomData<I>,
@@ -169,9 +166,9 @@ impl<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> VertexArr
 
 #[derive(Debug)]
 pub struct Builder<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> {
-    vertex_data: VertexBufferDynamicData<V, L>,
-    index_data: IndexBufferData,
-    color_data: VertexBufferDynamicData<C, L>,
+    vertex_data: vertex::DynamicData<V, L>,
+    index_data: index::IndexBufferData,
+    color_data: vertex::DynamicData<C, L>,
 
     _pb: PhantomData<V>,
     _ib: PhantomData<I>,
@@ -181,16 +178,16 @@ pub struct Builder<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GL
 impl<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> Builder<V, I, C, L> {
     pub fn create() -> Self {
         Self {
-            vertex_data: VertexBufferDynamicData::new::<V>(
+            vertex_data: vertex::DynamicData::new::<V>(
                 None,
-                Layout::new(
+                vertex::Layout::new(
                     0, // pos is defined as 0
                 ),
             ),
-            index_data: IndexBufferData::new::<I>(None),
-            color_data: VertexBufferDynamicData::new::<V>(
+            index_data: index::IndexBufferData::new::<I>(None),
+            color_data: vertex::DynamicData::new::<V>(
                 None,
-                Layout::new(
+                vertex::Layout::new(
                     1, // color is defined as 1
                 ),
             ),
@@ -246,9 +243,9 @@ impl<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> VertexArr
             id
         };
 
-        let position_vb = VertexBufferDynamic::from(self.vertex_data);
-        let color_vb = VertexBufferDynamic::from(self.color_data);
-        let index_buffer = IndexBuffer::from(self.index_data);
+        let position_vb = vertex::DynamicBuffer::from(self.vertex_data);
+        let color_vb = vertex::DynamicBuffer::from(self.color_data);
+        let index_buffer = index::IndexBuffer::from(self.index_data);
 
         let vao: Vao<V, I, C, L> = Vao {
             id: Guard {

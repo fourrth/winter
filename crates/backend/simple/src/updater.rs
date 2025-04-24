@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use winter_core::{
     bindings::{self, types::GLint},
-    buffer::VertexBufferDynamicData,
+    buffer::vertex,
     opengl::GLVertexType,
     raw::{
         self,
@@ -16,13 +16,13 @@ use winter_core::{
 /// Will push changes to OpenGL when dropped
 pub struct VertexBufferUpdater<'a, V: GLVertexType, const L: GLint> {
     id: NonZeroUInt,
-    inner: &'a mut VertexBufferDynamicData<V, L>,
+    inner: &'a mut vertex::DynamicData<V, L>,
     _v: PhantomData<V>,
 }
 
 //TODO: impl deref for this
 impl<'a, V: GLVertexType, const L: GLint> VertexBufferUpdater<'a, V, L> {
-    pub fn from(data: &'a mut VertexBufferDynamicData<V, L>, id: NonZeroUInt) -> Self {
+    pub fn from(data: &'a mut vertex::DynamicData<V, L>, id: NonZeroUInt) -> Self {
         Self {
             id,
             inner: data,

@@ -9,8 +9,8 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-winter-simple ={ version = "1.6.1",path = "crates/backend/simple"}
-winter-core ={ version = "1.6.1",path = "crates/core"}
+winter-simple ={ version = "1.6",path = "crates/backend/simple"}
+winter-core ={ version = "1.6",path = "crates/core"}
 game_of_life = {path = "crates/misic/game_of_life"}
 snake ={ path = "crates/misic/snake"}
 glfw = {version = "0.55"}
