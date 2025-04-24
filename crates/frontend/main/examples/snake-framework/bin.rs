@@ -100,10 +100,11 @@ fn main() {
         Vector3::from([-1.0, 1.0, 0.0]).mul_scalar(0.95),
     );
 
-    let vao_builder = winter_simple::Builder::create().add(
-        constructs::PixelGridSolidColorIndividual::new(grid_bounds, index_grid, color_data)
-            .into_drawable(),
-    );
+    let vao_builder: winter_simple::Builder<f32, u32, f32, 3> = winter_simple::Builder::create()
+        .add(
+            constructs::PixelGridSolidColorIndividual::new(grid_bounds, index_grid, color_data)
+                .into_drawable(),
+        );
 
     let mut context = Context::new(
         width,

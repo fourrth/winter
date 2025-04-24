@@ -47,7 +47,7 @@ fn main() -> Result<(), String> {
         .unwrap()
     };
 
-    let vao_builder: Builder<f32, u32, f32> = Builder::create()
+    let vao_builder: Builder<f32, u32, f32, 3> = Builder::create()
         .add(
             constructs::PixelGridSolidColorIndividual::new(position, index_grid, color_data)
                 .into_drawable(),

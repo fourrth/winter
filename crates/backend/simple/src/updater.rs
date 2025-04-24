@@ -14,15 +14,15 @@ use winter_core::{
 /// Wrapper type for updating your VertexBuffer
 ///
 /// Will push changes to OpenGL when dropped
-pub struct VertexBufferUpdater<'a, V: GLVertexType> {
+pub struct VertexBufferUpdater<'a, V: GLVertexType, const L: GLint> {
     id: NonZeroUInt,
-    inner: &'a mut VertexBufferDynamicData,
+    inner: &'a mut VertexBufferDynamicData<V, L>,
     _v: PhantomData<V>,
 }
 
 //TODO: impl deref for this
-impl<'a, V: GLVertexType> VertexBufferUpdater<'a, V> {
-    pub fn from(data: &'a mut VertexBufferDynamicData, id: NonZeroUInt) -> Self {
+impl<'a, V: GLVertexType, const L: GLint> VertexBufferUpdater<'a, V, L> {
+    pub fn from(data: &'a mut VertexBufferDynamicData<V, L>, id: NonZeroUInt) -> Self {
         Self {
             id,
             inner: data,
@@ -36,7 +36,7 @@ impl<'a, V: GLVertexType> VertexBufferUpdater<'a, V> {
     ///  No different than simply dropping the Updater
     pub fn write(self) {}
 }
-impl<'a, V: GLVertexType> Drop for VertexBufferUpdater<'a, V> {
+impl<'a, V: GLVertexType, const L: GLint> Drop for VertexBufferUpdater<'a, V, L> {
     fn drop(&mut self) {
         unsafe {
             // will push the changes to OpenGL

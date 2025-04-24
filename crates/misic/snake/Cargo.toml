@@ -7,13 +7,5 @@ description = "Iconic snake game!"
 [lib]
 path = "snake.rs"
 
-[[example]]
-name = "ascii"
-path = "examples/ascii.rs"
-
 [dependencies]
-rand = {version = "0.8.*"}
-
-[dev-dependencies]
-crossterm ={version = "0.27.*"}
-
+rand = {version = "0.8"}

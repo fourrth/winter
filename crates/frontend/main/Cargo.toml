@@ -1,6 +1,6 @@
 [package]
 name = "winter"
-version = "1.6.0"
+version = "1.6.1"
 edition = "2021"
 
 [lib]
@@ -39,10 +39,10 @@ winter-core ={ workspace = true}
 glfw = {workspace = true}
 
 [dev-dependencies]
-game_of_life = {path = "examples/game_of_life-framework/game_of_life"}
-snake ={ path = "examples/snake-framework/snake"}
-once_cell = {version = "1.19"}
-rand = {version = "0.8"}
+glmath = { workspace = true}
+bytemuck = {workspace = true}
+game_of_life = {workspace = true}
+snake ={workspace = true}
 serde_json = {version = "1.0"}
-glmath = { version = "0.1",git = "https://github.com/fourrth/glmath.git"}
-bytemuck = {version = "1.*",features = ["must_cast"]}
+once_cell = {version = "1.19"}
+# rand = {version = "0.8"}

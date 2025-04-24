@@ -1,6 +1,6 @@
 [package]
 name = "winter-core"
-version = "1.6.0"
+version = "1.6.1"
 edition = "2021"
 build = "build.rs"
 
@@ -33,8 +33,8 @@ once_cell = {version = "1.19"}
 glfw ={ workspace = true}
 
 [dependencies]
-num-integer ={ version = "0.1.*"}
-bytemuck = {version = "1.*",features = ["must_cast"]}
+num-integer ={ version = "0.1"}
+bytemuck = {workspace = true}
 
 [build-dependencies]
-gl_generator = { version = "0.14.*"}
+gl_generator = { version = "0.14"}

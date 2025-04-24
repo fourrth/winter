@@ -36,7 +36,7 @@ pub mod updater;
 pub use updater::*;
 
 use winter_core::{
-    bindings,
+    bindings::{self, types::GLint},
     buffer::{
         IndexBuffer, IndexBufferData, IndexBufferT, Layout, VertexBufferDynamic,
         VertexBufferDynamicData, VertexBufferT,
@@ -90,7 +90,9 @@ impl Drop for Guard {
 /// This means any higher level types
 /// should really be converted into their base
 /// representations before implementing [`Drawable`]
-pub trait Drawable<V: GLVertexType, I: GLIndexType, C: GLVertexType>: Debug {
+pub trait Drawable<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint>:
+    Debug
+{
     fn get_vertices(&self) -> &[V];
 
     /// if none, then it is inferred that
@@ -98,16 +100,17 @@ pub trait Drawable<V: GLVertexType, I: GLIndexType, C: GLVertexType>: Debug {
     fn get_indices(&self) -> &[I];
     fn get_colors(&self) -> &[C];
 }
-pub trait IntoDrawable<V: GLVertexType, I: GLIndexType, C: GLVertexType> {
-    type IntoDrawable: Drawable<V, I, C>;
+pub trait IntoDrawable<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> {
+    type IntoDrawable: Drawable<V, I, C, L>;
     fn into_drawable(self) -> Self::IntoDrawable;
 }
 
+/// Note L is the attrib len for both pos and color
 #[derive(Debug)]
-pub struct Vao<V: GLVertexType, I: GLIndexType, C: GLVertexType> {
+pub struct Vao<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> {
     id: Guard,
-    position_vb: VertexBufferDynamic,
-    color_vb: VertexBufferDynamic,
+    position_vb: VertexBufferDynamic<V, L>,
+    color_vb: VertexBufferDynamic<C, L>,
     index_buffer: IndexBuffer,
 
     _pb: PhantomData<V>,
@@ -115,19 +118,21 @@ pub struct Vao<V: GLVertexType, I: GLIndexType, C: GLVertexType> {
     _cb: PhantomData<C>,
 }
 
-impl<'a, V: GLVertexType, I: GLIndexType, C: GLVertexType> Drop for Vao<V, I, C> {
+impl<'a, V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> Drop
+    for Vao<V, I, C, L>
+{
     fn drop(&mut self) {
         unsafe {
             bindings::BindVertexArray(0);
         }
     }
 }
-impl<'a, V: GLVertexType, I: GLIndexType, C: GLVertexType> Vao<V, I, C> {
+impl<'a, V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> Vao<V, I, C, L> {
     /// This gives you a &mut to the position data.
     /// You can then modify this reference and
     /// when you drop the reference,
     /// it will write the new buffer to OpenGL
-    pub fn update_position_component(&'a mut self) -> VertexBufferUpdater<'a, V> {
+    pub fn update_position_component(&'a mut self) -> VertexBufferUpdater<'a, V, L> {
         let id = self.position_vb.id().into();
         VertexBufferUpdater::from(unsafe { self.position_vb.as_data_mut() }, id)
     }
@@ -135,13 +140,15 @@ impl<'a, V: GLVertexType, I: GLIndexType, C: GLVertexType> Vao<V, I, C> {
     /// You can then modify this reference and
     /// when you drop the reference,
     /// it will write the new buffer to OpenGL
-    pub fn update_color_component(&'a mut self) -> VertexBufferUpdater<'a, C> {
+    pub fn update_color_component(&'a mut self) -> VertexBufferUpdater<'a, C, L> {
         let id = self.color_vb.id().into();
         VertexBufferUpdater::from(unsafe { self.color_vb.as_data_mut() }, id)
     }
 }
 
-impl<V: GLVertexType, I: GLIndexType, C: GLVertexType> VertexArrayObject for Vao<V, I, C> {
+impl<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> VertexArrayObject
+    for Vao<V, I, C, L>
+{
     fn bind(&self) {
         unsafe { bindings::BindVertexArray(self.id.inner.into()) };
     }
@@ -161,35 +168,31 @@ impl<V: GLVertexType, I: GLIndexType, C: GLVertexType> VertexArrayObject for Vao
 }
 
 #[derive(Debug)]
-pub struct Builder<V: GLVertexType, I: GLIndexType, C: GLVertexType> {
-    vertex_data: VertexBufferDynamicData,
+pub struct Builder<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> {
+    vertex_data: VertexBufferDynamicData<V, L>,
     index_data: IndexBufferData,
-    color_data: VertexBufferDynamicData,
+    color_data: VertexBufferDynamicData<C, L>,
 
     _pb: PhantomData<V>,
     _ib: PhantomData<I>,
     _cb: PhantomData<C>,
 }
 
-impl<V: GLVertexType, I: GLIndexType, C: GLVertexType> Builder<V, I, C> {
+impl<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> Builder<V, I, C, L> {
     pub fn create() -> Self {
         Self {
             vertex_data: VertexBufferDynamicData::new::<V>(
                 None,
-                Layout {
-                    attrib_len: 3,
-                    attrib_type: V::to_glenum(),
-                    attrib_loc: 0, // pos is defined as 0
-                },
+                Layout::new(
+                    0, // pos is defined as 0
+                ),
             ),
             index_data: IndexBufferData::new::<I>(None),
             color_data: VertexBufferDynamicData::new::<V>(
                 None,
-                Layout {
-                    attrib_len: 3,
-                    attrib_type: C::to_glenum(),
-                    attrib_loc: 1, // color is defined as 1
-                },
+                Layout::new(
+                    1, // color is defined as 1
+                ),
             ),
 
             _pb: PhantomData,
@@ -197,12 +200,10 @@ impl<V: GLVertexType, I: GLIndexType, C: GLVertexType> Builder<V, I, C> {
             _cb: PhantomData,
         }
     }
-    pub fn add(mut self, drawable: impl Drawable<V, I, C>) -> Self {
+    pub fn add(mut self, drawable: impl Drawable<V, I, C, L>) -> Self {
         // maybe we should just keep track of it instead
         // of doing division every time, but idk
-        let len: usize = self.vertex_data.data.len()
-            / (self.vertex_data.layout.attrib_len as usize)
-            / std::mem::size_of::<V>();
+        let len: usize = self.vertex_data.data.len() / L as usize / std::mem::size_of::<V>();
 
         self.vertex_data
             .data
@@ -233,8 +234,10 @@ impl<V: GLVertexType, I: GLIndexType, C: GLVertexType> Builder<V, I, C> {
     }
 }
 
-impl<V: GLVertexType, I: GLIndexType, C: GLVertexType> VertexArrayObjectData for Builder<V, I, C> {
-    type VAO = Vao<V, I, C>;
+impl<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> VertexArrayObjectData
+    for Builder<V, I, C, L>
+{
+    type VAO = Vao<V, I, C, L>;
     fn build(self) -> Self::VAO {
         let id = unsafe {
             let mut id: u32 = 0;
@@ -247,7 +250,7 @@ impl<V: GLVertexType, I: GLIndexType, C: GLVertexType> VertexArrayObjectData for
         let color_vb = VertexBufferDynamic::from(self.color_data);
         let index_buffer = IndexBuffer::from(self.index_data);
 
-        let vao: Vao<V, I, C> = Vao {
+        let vao: Vao<V, I, C, L> = Vao {
             id: Guard {
                 inner: NonZeroUInt::new(id).unwrap(),
             },

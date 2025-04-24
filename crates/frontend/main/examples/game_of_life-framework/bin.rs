@@ -175,7 +175,7 @@ fn main() -> Result<(), String> {
         Vector3::from([-1.0, 1.0, 0.0]).mul_scalar(0.95),
     );
 
-    let vao_builder = Builder::create().add(
+    let vao_builder: Builder<f32, u32, f32, 3> = Builder::create().add(
         constructs::PixelGridSolidColorIndividual::new(grid_bounds, index_grid, color_data)
             .into_drawable(),
     );

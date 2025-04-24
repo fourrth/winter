@@ -6,13 +6,16 @@
 
 use std::marker::PhantomData;
 
-use winter_core::opengl::{GLIndexType, GLVertexType};
+use winter_core::{
+    bindings::types::GLint,
+    opengl::{GLIndexType, GLVertexType},
+};
 
 use crate::Drawable;
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Component<V: GLVertexType, I: GLIndexType, C: GLVertexType> {
+pub struct Component<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> {
     data: Box<[u8]>,
 
     // indices for indexing into data
@@ -28,20 +31,20 @@ pub struct Component<V: GLVertexType, I: GLIndexType, C: GLVertexType> {
     _i: PhantomData<I>,
     _c: PhantomData<C>,
 }
-impl<V: GLVertexType, I: GLIndexType, C: GLVertexType> Component<V, I, C> {
-    //TODO: fix this, but later because I am tired of looking at it
-    // basically rust has bad support for unsafe iterator stuff, so
-    // we can't just take in iterators if we want optimizations
-    // rust does have stuff like ExactSizeIterator and the nightly Trustlen,
-    // but they are not perfect (in fact, some I impl the above two
-    // still does not always do what it should optimization wise, so screw them:
-    // we allocate who cares)
-
-    // also, this will get better later on when we bundle the shader stuff together
-    // then we can do SSBOs and maybe some 1D texture stuff:
-    // it will make this a whole lot simpler
+impl<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> Component<V, I, C, L> {
     #[inline(always)]
     pub fn new(v_data: Box<[V]>, c_data: Box<[C]>, i_data: Box<[I]>) -> Self {
+        //TODO: fix this, but later because I am tired of looking at it
+        // basically rust has bad support for unsafe iterator stuff, so
+        // we can't just take in iterators if we want optimizations
+        // rust does have stuff like ExactSizeIterator and the nightly Trustlen,
+        // but they are not perfect (in fact, some I impl the above two
+        // still does not always do what it should optimization wise, so screw them:
+        // we allocate who cares)
+
+        // also, this will get better later on when we bundle the shader stuff together
+        // then we can do SSBOs and maybe some 1D texture stuff:
+        // it will make this a whole lot simpler
         let v_size = std::mem::size_of_val::<[_]>(v_data.as_ref());
         let c_size = std::mem::size_of_val::<[_]>(c_data.as_ref());
         let i_size = std::mem::size_of_val::<[_]>(i_data.as_ref());
@@ -73,6 +76,18 @@ impl<V: GLVertexType, I: GLIndexType, C: GLVertexType> Component<V, I, C> {
             _c: PhantomData,
         }
     }
+    // quick note:
+    // we are kind of setting ourselves
+    // up for failure with the pointer casts
+    // here as we don't really consider alignment
+    // what so ever. What we need to do is add
+    // our own alignment values into our indexes,
+    // but that sounds like too much work.
+    // Instead, I am of the school of thought that
+    // we wait until some really confusing bug comes up
+    // and deal with it then when I am chasing it down
+    // for over a month. Much easier
+    // (plus it won't break on x86 so who really cares...)
     #[inline(always)]
     fn get_vertices(&self) -> &[V] {
         unsafe {
@@ -163,20 +178,7 @@ impl<V: GLVertexType, I: GLIndexType, C: GLVertexType> Component<V, I, C> {
         // or merged into larger pieces
         {
             let indices = other.get_indices_mut();
-
-            // VERY IMPORTANT TODO HERE
-            //TODO: make component know about buffer layouts
-            // currently, component knows nothing about buffer layouts
-            // and this is below is simply hardcoded as 3 (each point is a vec3)
-            // this needs to change, along with pretty much
-            // everything about layouts. The whole idea of layouts
-            // can be done via const generics and associated functions
-            // we literally already do it with the C::gl_enum stuff,
-            // just need to do more.
-            // However,... that can be done another time as it's really
-            // not important. We will never not use vector 3s for the time being.
-
-            let len: usize = self.get_vertices().len() / (3 as usize);
+            let len: usize = self.get_vertices().len() / L as usize;
 
             for ca in indices {
                 *ca = *ca + I::from_usize(len);
@@ -241,7 +243,9 @@ impl<V: GLVertexType, I: GLIndexType, C: GLVertexType> Component<V, I, C> {
         }
     }
 }
-impl<V: GLVertexType, I: GLIndexType, C: GLVertexType> Drawable<V, I, C> for Component<V, I, C> {
+impl<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> Drawable<V, I, C, L>
+    for Component<V, I, C, L>
+{
     fn get_vertices(&self) -> &[V] {
         self.get_vertices()
     }

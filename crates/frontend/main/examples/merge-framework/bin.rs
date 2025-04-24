@@ -99,7 +99,7 @@ fn main() -> Result<(), String> {
     let tri_left_comp = constructs::TriangleSolidColor::new1(tri_left, color1).into_drawable();
     let tri_right_comp = constructs::TriangleSolidColor::new1(tri_right, color2).into_drawable();
 
-    let mut vao_builder: Builder<f32, u32, f32> = Builder::create();
+    let mut vao_builder: Builder<f32, u32, f32, 3> = Builder::create();
     match kind {
         DrawKind::Square => {
             vao_builder = vao_builder

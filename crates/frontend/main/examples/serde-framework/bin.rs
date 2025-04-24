@@ -67,7 +67,7 @@ fn main() -> Result<(), String> {
         position, index_grid, color_data,
     ))
     .unwrap();
-    let vao_builder: Builder<f32, u32, f32> = Builder::create()
+    let vao_builder: Builder<f32, u32, f32, 3> = Builder::create()
         .add(
             serde_json::from_str::<constructs::PixelGridSolidColorIndividual<_, _, _>>(&pixel_grid)
                 .unwrap()

@@ -12,7 +12,10 @@ use std::marker::PhantomData;
 
 use glmath::{vector::Vector3, Element};
 
-use winter_core::opengl::{GLIndexType, GLVertexType};
+use winter_core::{
+    bindings::types::GLint,
+    opengl::{GLIndexType, GLVertexType},
+};
 
 use super::{primitives::Component, shapes, IndexGrid, IntoDrawable};
 /// Basic one color triangles
@@ -53,10 +56,10 @@ impl<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element>
     }
 }
 
-impl<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element> IntoDrawable<V, I, C>
-    for TriangleSolidColor<V, I, C>
+impl<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element, const L: GLint>
+    IntoDrawable<V, I, C, L> for TriangleSolidColor<V, I, C>
 {
-    type IntoDrawable = Component<V, I, C>;
+    type IntoDrawable = Component<V, I, C, L>;
     #[inline(always)]
     fn into_drawable(self) -> Self::IntoDrawable {
         let v_data = Box::new(bytemuck::must_cast::<shapes::Triangle<V>, [V; 9]>(
@@ -115,10 +118,10 @@ impl<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element>
             .map(|tri| TriangleSolidColor::new1(tri, self.color))
     }
 }
-impl<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element> IntoDrawable<V, I, C>
-    for RectangleSolidColor<V, I, C>
+impl<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element, const L: GLint>
+    IntoDrawable<V, I, C, L> for RectangleSolidColor<V, I, C>
 {
-    type IntoDrawable = Component<V, I, C>;
+    type IntoDrawable = Component<V, I, C, L>;
     #[inline(always)]
     fn into_drawable(self) -> Self::IntoDrawable {
         let v_data = [
@@ -316,10 +319,10 @@ impl<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element>
             .map(|(rect, color)| RectangleSolidColor::new1(rect, color))
     }
 }
-impl<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element> IntoDrawable<V, I, C>
-    for PixelGridSolidColorIndividual<V, I, C>
+impl<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element, const L: GLint>
+    IntoDrawable<V, I, C, L> for PixelGridSolidColorIndividual<V, I, C>
 {
-    type IntoDrawable = Component<V, I, C>;
+    type IntoDrawable = Component<V, I, C, L>;
     fn into_drawable(self) -> Self::IntoDrawable {
         let (width, height) = self.get_actual_dimensions();
         let v_data = self
