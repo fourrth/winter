@@ -1,15 +1,16 @@
+#![allow(non_snake_case)]
+
 use glfw::ffi::GLFWwindow;
 use once_cell::sync::Lazy;
-use std::{collections::HashMap, ffi::c_void};
-
-use winter_simple::winter_core::{
+use rand::Rng;
+use std::{collections::HashMap, env::args, ffi::c_void, time::Instant};
+use winter_core::{
     bindings::{
         self,
         types::{GLfloat, GLint, GLuint},
     },
     raw::{self, buffers::BufferTarget},
 };
-
 fn proc_loader(str: &'static str) -> *const c_void {
     unsafe {
         let mut name = str.as_bytes().to_vec();
@@ -17,22 +18,25 @@ fn proc_loader(str: &'static str) -> *const c_void {
         glfw::ffi::glfwGetProcAddress(name.as_ptr() as *const i8)
     }
 }
-#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Hash)]
+
+#[derive(Clone, Copy, Debug)]
 enum DrawKind {
     Square,
     Triangle,
 }
-static DRAW_KIND_MAP: Lazy<HashMap<&'static str, DrawKind>> = Lazy::new(|| {
-    use DrawKind::*;
-    let mut map = HashMap::new();
-    map.insert("square", Square);
-    map.insert("triangle", Triangle);
-    map
+
+static DRAWKIND_HASHMAP: Lazy<HashMap<&'static str, DrawKind>> = Lazy::new(|| {
+    HashMap::from([
+        ("square", DrawKind::Square),
+        ("triangle", DrawKind::Triangle),
+    ])
 });
 
+static mut RNG_GEN: Lazy<rand::rngs::OsRng> = Lazy::new(|| rand::rngs::OsRng);
+
 struct SimpleStruct {
-    pub vertex_shader_text: &'static [u8],
-    pub fragment_shader_text: &'static [u8],
+    pub vertex_shader_text: String,
+    pub fragment_shader_text: String,
     pub vertices: &'static [GLfloat],
     pub indices: &'static [GLuint],
     pub title: String,
@@ -42,22 +46,12 @@ struct SimpleStruct {
 }
 impl SimpleStruct {
     pub fn new(width: GLint, height: GLint, kind: DrawKind) -> Self {
-        let vertex_shader_text: &'static [u8] = b"#version 320 es
-        layout (location = 0) in vec3 vertPosition;
-    
-        void main()
-        {
-           gl_Position = vec4(vertPosition,1.0);
-        };\0";
-
-        let fragment_shader_text: &'static [u8] = b"#version 320 es
-        precision mediump float;
-        out vec4 outputF;
-        void main()
-        {
-           outputF = vec4(1.0,1.0,1.0,1.0);
-        };\0";
-
+        let vertex_shader_text = String::from(include_str!("vertex_shader.glsl"));
+        let fragment_shader_text = format!(
+            include_str!("frag_shader.glsl"),
+            unsafe { RNG_GEN.gen::<f32>() },
+            unsafe { RNG_GEN.gen::<f32>() },
+        );
         let (vertices, indices, title): (&'static [GLfloat], &'static [GLuint], String) = match kind
         {
             DrawKind::Square => {
@@ -112,7 +106,7 @@ impl SimpleStruct {
             let window = glfw::ffi::glfwCreateWindow(
                 self.width,
                 self.height,
-                self.title.as_bytes() as *const _ as *const i8,
+                self.title.as_bytes().as_ptr() as *const i8,
                 std::ptr::null_mut(),
                 std::ptr::null_mut(),
             );
@@ -128,24 +122,23 @@ impl SimpleStruct {
         }
     }
 }
+
 fn main() -> Result<(), String> {
-    let drawkind = match std::env::args().skip(1).next() {
-        Some(str) => {
-            if let Some(&kind) = DRAW_KIND_MAP.get(str.to_ascii_lowercase().as_str()) {
-                kind
-            } else {
-                // then no good match, log and do default
-                dbg!("Failed to get a good match, using default triangle (options: triangle, square)");
-                DrawKind::Triangle
-            }
-        }
+    let kind_str = match args().skip(1).next() {
+        Some(val) => val,
         None => {
-            // means no input, do default like above
-            dbg!("Failed to get a good match, using default triangle (options: triangle, square)");
-            DrawKind::Triangle
+            println!("Did not give a valid argument. Valid arguments are triangle or square. Using triangle");
+            String::from("triangle")
         }
     };
-    let mut ss = SimpleStruct::new(640, 640, drawkind);
+    let kind = match DRAWKIND_HASHMAP.get(kind_str.as_str()) {
+        Some(val) => val,
+        None => {
+            println!("Did not give a valid argument. Valid arguments are triangle or square. Using Triangle");
+            &DrawKind::Triangle
+        }
+    };
+    let mut ss = SimpleStruct::new(640, 640, *kind);
     ss.initialize()?;
     unsafe {
         let program = raw::shader::CreateProgram(
@@ -185,14 +178,24 @@ fn main() -> Result<(), String> {
             3 * std::mem::size_of::<GLfloat>() as GLint,
             std::ptr::null(),
         );
-        bindings::EnableVertexAttribArray(0);
+        let vertPositionL: GLint =
+            bindings::GetAttribLocation(program, b"vertPosition\0".as_ptr() as *const i8);
+        assert!(vertPositionL != -1);
+        bindings::EnableVertexAttribArray(vertPositionL as GLuint);
+
+        let mut time: Instant;
+        let timeuL: GLint = bindings::GetUniformLocation(program, b"timeu\0".as_ptr() as *const i8);
+        if timeuL == -1 {
+            return Err(String::from("Could not Get the Location of time uniform"));
+        }
 
         bindings::BindBuffer(bindings::ELEMENT_ARRAY_BUFFER, ib);
-
         bindings::UseProgram(program);
         bindings::BindVertexArray(vao);
-
+        let time_start = Instant::now();
         while glfw::ffi::glfwWindowShouldClose(ss.window.unwrap()) == 0 {
+            time = Instant::now();
+
             bindings::ClearColor(0.8, 0.7, 0.7, 1.0);
             bindings::Clear(bindings::COLOR_BUFFER_BIT);
 
@@ -203,13 +206,16 @@ fn main() -> Result<(), String> {
                 std::ptr::null(),
             );
 
+            // update the uniforms
+            bindings::Uniform1f(timeuL, time.duration_since(time_start).as_secs_f32());
+
             glfw::ffi::glfwSwapBuffers(ss.window.unwrap());
             glfw::ffi::glfwPollEvents();
         }
-        bindings::DeleteVertexArrays(1, &vao);
-        bindings::DeleteBuffers(1, &vb);
-        bindings::DeleteBuffers(1, &ib);
-        bindings::DeleteProgram(program);
+        raw::buffers::DeleteVertexArray(vao);
+        raw::buffers::DeleteBuffer(vb);
+        raw::buffers::DeleteBuffer(ib);
+        raw::shader::DeleteProgram(program);
 
         glfw::ffi::glfwTerminate();
     }

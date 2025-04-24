@@ -1,6 +1,6 @@
 use glfw::ffi::{glfwWindowShouldClose, GLFWwindow};
 use std::ffi::{c_int, c_void, CString};
-use winter_simple::winter_core::bindings;
+use winter_core::bindings;
 
 pub type GlfwInputFunction =
     fn(window: *mut GLFWwindow, key: c_int, scancode: c_int, action: c_int, mods: c_int);

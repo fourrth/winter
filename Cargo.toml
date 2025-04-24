@@ -4,5 +4,12 @@ members = [
     "crates/backend/simple",
     "crates/frontend/main",
 ]
-
 resolver = "2"
+
+[workspace.dependencies]
+winter-simple ={ version = "1.6.0",path = "crates/backend/simple"}
+winter-core ={ version = "1.6.0",path = "crates/core"}
+glfw = {version = "0.55"}
+glmath = { version = "0.1.*",features = ["bytemuck"],git = "https://github.com/fourrth/glmath.git"}
+
+

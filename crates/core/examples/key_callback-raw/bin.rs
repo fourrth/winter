@@ -4,7 +4,7 @@ use std::{
 };
 
 use glfw::ffi::GLFWwindow;
-use winter_simple::winter_core::bindings;
+use winter_core::bindings;
 
 extern "C" fn key_callback(
     window: *mut GLFWwindow,

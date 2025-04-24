@@ -1,6 +1,6 @@
 use std::ffi::c_void;
 
-use winter_simple::winter_core::bindings;
+use winter_core::bindings;
 
 fn proc_loader(str: &'static str) -> *const c_void {
     unsafe {

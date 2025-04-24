@@ -1,7 +1,7 @@
 use std::{ffi::CString, mem::ManuallyDrop};
 
 use glfw::ffi::GLFWkeyfun;
-use winter_simple::winter_core::vao::{VertexArrayObject, VertexArrayObjectData};
+use winter_core::vao::{VertexArrayObject, VertexArrayObjectData};
 
 use crate::shader::Program;
 

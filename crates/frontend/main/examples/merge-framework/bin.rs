@@ -2,10 +2,10 @@ use glmath::vector::Vector3;
 use once_cell::sync::Lazy;
 use std::{collections::HashMap, ffi::CString};
 use winter::context::Context;
+use winter_core::{bindings, vao::VertexArrayObject};
 use winter_simple::{
     constructs,
     shapes::{self, Translate},
-    winter_core::{bindings, vao::VertexArrayObject},
     Builder, IntoDrawable,
 };
 #[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Hash)]

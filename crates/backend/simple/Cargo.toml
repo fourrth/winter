@@ -1,6 +1,6 @@
 [package]
 name = "winter-simple"
-version = "1.6.0-alpha"
+version = "1.6.0"
 edition = "2021"
 
 [lib]
@@ -12,7 +12,7 @@ default = []
 serde = ["dep:serde","glmath/serde"]
 
 [dependencies]
-winter-core = { version = "1.6.0-alpha",path = "../../core"}
-glmath = { version = "0.1.*",features = ["bytemuck"],git = "https://github.com/fourrth/glmath.git"}
+winter-core = {workspace = true}
+glmath = {workspace = true,features = ["bytemuck"]}
 bytemuck = {version = "1.*",features = ["must_cast"]}
 serde = { version = "1.0.*",optional = true,features = ["derive"]}

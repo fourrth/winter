@@ -9,11 +9,8 @@ use std::{
 
 use glmath::{vector::Vector3, Element};
 use winter::context::Context;
-use winter_simple::{
-    constructs, shapes,
-    winter_core::{bindings, vao::VertexArrayObject},
-    Builder, IndexGrid, IntoDrawable,
-};
+use winter_core::{bindings, vao::VertexArrayObject};
+use winter_simple::{constructs, shapes, Builder, IndexGrid, IntoDrawable};
 const SAVE_FILE_OUTPUT_DIR: &str = "./target/save_data.txt";
 const DEFAULT_TPS: u64 = 10;
 

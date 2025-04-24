@@ -1,6 +1,6 @@
 [package]
 name = "winter"
-version = "1.6.0-alpha"
+version = "1.6.0"
 edition = "2021"
 
 [lib]
@@ -29,30 +29,14 @@ path = "examples/game_of_life-framework/bin.rs"
 name = "colorchanger-framework"
 path = "examples/colorchanger-framework/bin.rs"
 
-[[example]]
-name = "colorchanger-raw"
-path = "examples/colorchanger-raw/bin.rs"
-
-[[example]]
-name = "window-raw"
-path = "examples/window-raw/bin.rs"
-
-[[example]]
-name = "simple-raw"
-path = "examples/simple-raw/bin.rs"
-
-[[example]]
-name = "key_callback-raw"
-path = "examples/key_callback-raw/bin.rs"
-
-
 [features]
 default = []
 serde = ["winter-simple/serde"]
 
 [dependencies]
-winter-simple ={ version = "1.6.0-alpha",path = "../../backend/simple"}
-glfw = {version = "0.55"}
+winter-simple ={ workspace = true}
+winter-core ={ workspace = true}
+glfw = {workspace = true}
 
 [dev-dependencies]
 game_of_life = {path = "examples/game_of_life-framework/game_of_life"}

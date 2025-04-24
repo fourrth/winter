@@ -1,6 +1,6 @@
 [package]
 name = "winter-core"
-version = "1.6.0-alpha"
+version = "1.6.0"
 edition = "2021"
 build = "build.rs"
 
@@ -8,12 +8,33 @@ build = "build.rs"
 path = "src/lib.rs"
 crate-type = ["lib"]
 
+[[example]]
+name = "colorchanger-raw"
+path = "examples/colorchanger-raw/bin.rs"
+
+[[example]]
+name = "window-raw"
+path = "examples/window-raw/bin.rs"
+
+[[example]]
+name = "simple-raw"
+path = "examples/simple-raw/bin.rs"
+
+[[example]]
+name = "key_callback-raw"
+path = "examples/key_callback-raw/bin.rs"
+
 [features]
 default = []
 
+[dev-dependencies]
+rand = {version = "0.8"}
+once_cell = {version = "1.19"}
+glfw ={ workspace = true}
+
 [dependencies]
 num-integer ={ version = "0.1.*"}
-bytemuck = {version = "1.*"}
+bytemuck = {version = "1.*",features = ["must_cast"]}
 
 [build-dependencies]
 gl_generator = { version = "0.14.*"}

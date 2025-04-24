@@ -1,11 +1,10 @@
 use glmath::vector::Vector3;
 use std::{ffi::CString, time::Instant};
 use winter::context::Context;
-use winter_simple::winter_core::bindings;
+use winter_core::{bindings, vao::VertexArrayObject};
 use winter_simple::{
     constructs,
     shapes::{self, Translate},
-    winter_core::vao::VertexArrayObject,
     Builder, IndexGrid, IntoDrawable,
 };
 fn main() -> Result<(), String> {

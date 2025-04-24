@@ -1,6 +1,6 @@
 use std::ffi::CString;
 
-use winter_simple::winter_core::{bindings, raw::shader};
+use winter_core::{bindings, raw::shader};
 
 #[derive(Debug)]
 pub struct Program {

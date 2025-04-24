@@ -12,11 +12,8 @@ use std::{
 use glmath::vector::Vector3;
 use snake::{Coordinate, Direction};
 use winter::context::Context;
-use winter_simple::{
-    constructs, shapes,
-    winter_core::{bindings, vao::VertexArrayObject},
-    IndexGrid, IntoDrawable,
-};
+use winter_core::{bindings, vao::VertexArrayObject};
+use winter_simple::{constructs, shapes, IndexGrid, IntoDrawable};
 
 #[inline(always)]
 fn clamp_pos(num: f32) -> f32 {

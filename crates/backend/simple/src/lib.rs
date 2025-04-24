@@ -34,7 +34,7 @@ pub mod shapes;
 
 pub mod updater;
 pub use updater::*;
-pub use winter_core;
+
 use winter_core::{
     bindings,
     buffer::{
