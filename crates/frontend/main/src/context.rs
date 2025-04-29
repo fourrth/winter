@@ -3,7 +3,7 @@ use std::{ffi::CString, mem::ManuallyDrop};
 use glfw::ffi::GLFWkeyfun;
 use winter_core::vao::{VertexArrayObject, VertexArrayObjectData};
 
-use crate::shader::Program;
+use crate::shader::program::{self, Program, ProgramKind};
 
 use self::window::{main_context_keyboard_input, GlfwInputFunction, USER_KEY_FUNC};
 
@@ -25,7 +25,12 @@ impl<VAO: VertexArrayObject> Context<VAO> {
         vertex_array_object_data: VAOD,
     ) -> Result<Self, String> {
         let window = Window::new(width, height, title)?;
-        let program = Program::new(vertex_shader_text, fragment_shader_text)?;
+        let program = {
+            program::Builder::create()
+                .add(ProgramKind::VertexShader(vertex_shader_text))
+                .add(ProgramKind::FragmentShader(fragment_shader_text))
+                .build()?
+        };
         unsafe {
             if let Some(input_f) = input_function {
                 glfw::ffi::glfwSetKeyCallback(
