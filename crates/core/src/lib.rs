@@ -7,6 +7,7 @@ pub mod bindings {
 pub mod buffer;
 pub mod opengl;
 pub mod raw;
+pub mod uniform;
 pub mod vao;
 
 #[cfg(target_pointer_width = "64")]

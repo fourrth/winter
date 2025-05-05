@@ -1,6 +1,6 @@
 [package]
 name = "winter"
-version = "1.6.3"
+version = "1.6.4"
 edition = "2021"
 
 [lib]
@@ -28,6 +28,10 @@ path = "examples/game_of_life-framework/bin.rs"
 [[example]]
 name = "colorchanger-framework"
 path = "examples/colorchanger-framework/bin.rs"
+
+[[example]]
+name = "uniforms-framework"
+path = "examples/uniforms-framework/bin.rs"
 
 [features]
 default = []

@@ -1,6 +1,7 @@
 use std::ffi::CString;
 
 use winter_core::{bindings, raw::shader};
+use winter_simple::uniform::GLUniform;
 
 pub enum ProgramKind {
     VertexShader(CString),
@@ -66,6 +67,10 @@ pub struct Program {
 impl Program {
     pub fn enable(&self) {
         unsafe { bindings::UseProgram(self.id) }
+    }
+    pub fn uniform<T, U: GLUniform<T>>(&self, name: &str) -> Option<U> {
+        let out = unsafe { bindings::GetUniformLocation(self.id, name as *const _ as *const i8) };
+        U::new(out)
     }
 }
 

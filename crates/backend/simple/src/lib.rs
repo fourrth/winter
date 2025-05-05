@@ -31,6 +31,7 @@
 pub mod constructs;
 pub mod primitives;
 pub mod shapes;
+pub mod uniform;
 
 pub mod updater;
 pub use updater::*;
