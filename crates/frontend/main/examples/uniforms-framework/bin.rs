@@ -2,19 +2,16 @@ use glfw::ffi::GLFWwindow;
 use glmath::vector::Vector3;
 use std::io::Write;
 use std::{
-    ffi::CString,
     io::{self, stdout, BufWriter},
     sync::atomic::{AtomicUsize, Ordering},
     time::Instant,
 };
-use winter::context::Context;
+use winter::context::{Context, ContextKind};
 use winter_core::{
     bindings::{self, types::GLfloat},
     uniform::Uniform,
 };
-use winter_simple::{
-    constructs, shapes, uniform, Builder, IndexGrid, IntoDrawable, VertexArrayObject,
-};
+use winter_simple::{constructs, shapes, uniform, IndexGrid, IntoDrawable, VertexArrayObject};
 
 // This isn't perfect as it is still possible to
 // write while reading,
@@ -54,12 +51,12 @@ fn main() -> Result<(), String> {
     let width = 800;
     let height = 800;
 
-    let title = CString::new("Hello Example Framework!").unwrap();
+    let title = String::from("Hello Example Framework!");
 
     let (vertex_shader_text, fragment_shader_text) = {
         (
-            CString::new(include_str!("vertex_shader.glsl")).unwrap(),
-            CString::new(include_str!("frag_shader.glsl")).unwrap(),
+            String::from(include_str!("vertex_shader.glsl")),
+            String::from(include_str!("frag_shader.glsl")),
         )
     };
 
@@ -90,20 +87,22 @@ fn main() -> Result<(), String> {
         .unwrap()
     };
 
-    let vao_builder: Builder<f32, u32, f32, 3, false> = Builder::create().add(
-        constructs::PixelGridSolidColorIndividual::new(position, index_grid, color_data)
-            .into_drawable(),
-    );
+    let vao_builder: winter_simple::vao::Builder<f32, u32, f32, 3, false, { bindings::TRIANGLES }> =
+        winter_simple::vao::Builder::create().add(
+            constructs::PixelGridSolidColorIndividual::new(position, index_grid, color_data)
+                .into_drawable(),
+        );
 
-    let mut context = Context::new(
-        width,
-        height,
-        title,
-        vertex_shader_text,
-        fragment_shader_text,
-        None,
-        vao_builder,
-    )?;
+    let mut context: Context<
+        winter_simple::vao::Builder<f32, u32, f32, 3, false, { bindings::TRIANGLES }>,
+    > = winter::context::Builder::new()
+        .add(ContextKind::WindowSize(width, height))
+        .add(ContextKind::Title(title))
+        .add(ContextKind::VertexShaderText(vertex_shader_text))
+        .add(ContextKind::FragmentShaderText(fragment_shader_text))
+        .add(ContextKind::InputFunction(None))
+        .add(ContextKind::VertexArrayObjectData(vao_builder))
+        .build()?;
     let mut writer: BufWriter<io::StdoutLock<'static>> = BufWriter::new(stdout().lock());
 
     unsafe {
@@ -187,7 +186,7 @@ fn main() -> Result<(), String> {
             if fps_update_start.elapsed() > time_max_before_reset {
                 frame_time = fps_update_start.elapsed().as_secs_f64() / frame_cnt as f64;
                 fps_update_start = Instant::now();
-                frame_cnt = 0f64;
+                frame_cnt = 1f64;
             } else {
                 frame_cnt += 1f64;
             }

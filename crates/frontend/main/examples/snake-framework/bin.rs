@@ -1,5 +1,4 @@
 use std::{
-    ffi::CString,
     io::{self, BufWriter, Write},
     sync::{
         atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering},
@@ -11,7 +10,7 @@ use std::{
 
 use glmath::vector::Vector3;
 use snake::{Coordinate, Direction};
-use winter::context::Context;
+use winter::context::{Context, ContextKind};
 use winter_core::bindings;
 use winter_simple::{constructs, shapes, IndexGrid, IntoDrawable, VertexArrayObject};
 
@@ -32,7 +31,7 @@ fn new_snake(width: u64, height: u64) -> snake::Context {
         .build()
 }
 
-fn main() {
+fn main() -> Result<(), String> {
     let args: Vec<_> = std::env::args().skip(1).collect();
 
     let width = if let Some(width_) = args.get(0) {
@@ -59,12 +58,12 @@ fn main() {
         1000
     };
 
-    let title = CString::new("Snake Game!").unwrap();
+    let title = String::from("Snake Game!");
 
     let (vertex_shader_text, fragment_shader_text) = {
         (
-            CString::new(include_str!("vertex_shader.glsl")).unwrap(),
-            CString::new(include_str!("frag_shader.glsl")).unwrap(),
+            String::from(include_str!("vertex_shader.glsl")),
+            String::from(include_str!("frag_shader.glsl")),
         )
     };
 
@@ -100,50 +99,53 @@ fn main() {
         Vector3::from([-1.0, 1.0, 0.0]).mul_scalar(0.95),
     );
 
-    let vao_builder: winter_simple::Builder<f32, u32, f32, 3, false> =
-        winter_simple::Builder::create().add(
+    let vao_builder: winter_simple::vao::Builder<f32, u32, f32, 3, false, { bindings::TRIANGLES }> =
+        winter_simple::vao::Builder::create().add(
             constructs::PixelGridSolidColorIndividual::new(grid_bounds, index_grid, color_data)
                 .into_drawable(),
         );
 
-    let mut context = Context::new(
-        width,
-        height,
-        title,
-        vertex_shader_text,
-        fragment_shader_text,
-        Some(|window, key, _, action, _| {
-            if action == glfw::ffi::PRESS {
-                if key == glfw::ffi::KEY_ESCAPE {
-                    unsafe {
-                        glfw::ffi::glfwSetWindowShouldClose(window, glfw::ffi::TRUE);
+    let mut context: Context<
+        winter_simple::vao::Builder<f32, u32, f32, 3, false, { bindings::TRIANGLES }>,
+    > = winter::context::Builder::new()
+        .add(ContextKind::WindowSize(width, height))
+        .add(ContextKind::Title(title))
+        .add(ContextKind::VertexShaderText(vertex_shader_text))
+        .add(ContextKind::FragmentShaderText(fragment_shader_text))
+        .add(ContextKind::InputFunction(Some(
+            |window, key, _, action, _| {
+                if action == glfw::ffi::PRESS {
+                    if key == glfw::ffi::KEY_ESCAPE {
+                        unsafe {
+                            glfw::ffi::glfwSetWindowShouldClose(window, glfw::ffi::TRUE);
+                        }
+                    } else if key == glfw::ffi::KEY_SPACE {
+                        DEBUG_ADD_FOOD_PRESS.store(true, Ordering::Relaxed);
+                    } else if key == glfw::ffi::KEY_ENTER {
+                        // toggle ticking the snake
+                        SHOULD_TICK.fetch_xor(true, Ordering::Relaxed);
+                        if SHOULD_TICK.load(Ordering::Relaxed) & SHOULD_DIE.load(Ordering::Relaxed)
+                        {
+                            SHOULD_RESTART.store(true, Ordering::Relaxed);
+                        }
+                    } else if key == glfw::ffi::KEY_UP || key == glfw::ffi::KEY_W {
+                        let _ = PRESS_KEY.fetch_or(1, Ordering::Relaxed);
+                    } else if key == glfw::ffi::KEY_LEFT || key == glfw::ffi::KEY_A {
+                        let _ = PRESS_KEY.fetch_or(2, Ordering::Relaxed);
+                    } else if key == glfw::ffi::KEY_DOWN || key == glfw::ffi::KEY_S {
+                        let _ = PRESS_KEY.fetch_or(4, Ordering::Relaxed);
+                    } else if key == glfw::ffi::KEY_RIGHT || key == glfw::ffi::KEY_D {
+                        let _ = PRESS_KEY.fetch_or(8, Ordering::Relaxed);
                     }
-                } else if key == glfw::ffi::KEY_SPACE {
-                    DEBUG_ADD_FOOD_PRESS.store(true, Ordering::Relaxed);
-                } else if key == glfw::ffi::KEY_ENTER {
-                    // toggle ticking the snake
-                    SHOULD_TICK.fetch_xor(true, Ordering::Relaxed);
-                    if SHOULD_TICK.load(Ordering::Relaxed) & SHOULD_DIE.load(Ordering::Relaxed) {
-                        SHOULD_RESTART.store(true, Ordering::Relaxed);
+                } else if action == glfw::ffi::RELEASE {
+                    if key == glfw::ffi::KEY_SPACE {
+                        DEBUG_ADD_FOOD_RELEASE.store(true, Ordering::Relaxed);
                     }
-                } else if key == glfw::ffi::KEY_UP || key == glfw::ffi::KEY_W {
-                    let _ = PRESS_KEY.fetch_or(1, Ordering::Relaxed);
-                } else if key == glfw::ffi::KEY_LEFT || key == glfw::ffi::KEY_A {
-                    let _ = PRESS_KEY.fetch_or(2, Ordering::Relaxed);
-                } else if key == glfw::ffi::KEY_DOWN || key == glfw::ffi::KEY_S {
-                    let _ = PRESS_KEY.fetch_or(4, Ordering::Relaxed);
-                } else if key == glfw::ffi::KEY_RIGHT || key == glfw::ffi::KEY_D {
-                    let _ = PRESS_KEY.fetch_or(8, Ordering::Relaxed);
                 }
-            } else if action == glfw::ffi::RELEASE {
-                if key == glfw::ffi::KEY_SPACE {
-                    DEBUG_ADD_FOOD_RELEASE.store(true, Ordering::Relaxed);
-                }
-            }
-        }),
-        vao_builder, // board is fully dead right now
-    )
-    .unwrap();
+            },
+        )))
+        .add(ContextKind::VertexArrayObjectData(vao_builder)) // board is fully dead right now
+        .build()?;
 
     static SHOULD_CLOSE: AtomicBool = AtomicBool::new(false);
     static SHOULD_TICK: AtomicBool = AtomicBool::new(false);
@@ -318,4 +320,5 @@ fn main() {
     }
     println!();
     tick_th.join().unwrap();
+    Ok(())
 }

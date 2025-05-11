@@ -1,12 +1,12 @@
 use glmath::vector::Vector3;
 use once_cell::sync::Lazy;
-use std::{collections::HashMap, ffi::CString};
-use winter::context::Context;
+use std::collections::HashMap;
+use winter::context::{Context, ContextKind};
 use winter_core::bindings;
 use winter_simple::{
     constructs,
     shapes::{self, Translate},
-    Builder, IntoDrawable, VertexArrayObject,
+    IntoDrawable, VertexArrayObject,
 };
 #[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Hash)]
 pub enum DrawKind {
@@ -66,12 +66,12 @@ fn main() -> Result<(), String> {
         (width, height, kind)
     };
 
-    let title = CString::new("Hello Example Framework!").unwrap();
+    let title = String::from("Hello Example Framework!");
 
     let (vertex_shader_text, fragment_shader_text) = {
         (
-            CString::new(include_str!("vertex_shader.glsl")).unwrap(),
-            CString::new(include_str!("frag_shader.glsl")).unwrap(),
+            String::from(include_str!("vertex_shader.glsl")),
+            String::from(include_str!("frag_shader.glsl")),
         )
     };
 
@@ -99,7 +99,14 @@ fn main() -> Result<(), String> {
     let tri_left_comp = constructs::TriangleSolidColor::new1(tri_left, color1).into_drawable();
     let tri_right_comp = constructs::TriangleSolidColor::new1(tri_right, color2).into_drawable();
 
-    let mut vao_builder: Builder<f32, u32, f32, 3, false> = Builder::create();
+    let mut vao_builder: winter_simple::vao::Builder<
+        f32,
+        u32,
+        f32,
+        3,
+        false,
+        { bindings::TRIANGLES },
+    > = winter_simple::vao::Builder::create();
     match kind {
         DrawKind::Square => {
             vao_builder = vao_builder
@@ -111,15 +118,16 @@ fn main() -> Result<(), String> {
         }
     }
 
-    let mut context = Context::new(
-        width,
-        height,
-        title,
-        vertex_shader_text,
-        fragment_shader_text,
-        None,
-        vao_builder,
-    )?;
+    let mut context: Context<
+        winter_simple::vao::Builder<f32, u32, f32, 3, false, { bindings::TRIANGLES }>,
+    > = winter::context::Builder::new()
+        .add(ContextKind::WindowSize(width, height))
+        .add(ContextKind::Title(title))
+        .add(ContextKind::VertexShaderText(vertex_shader_text))
+        .add(ContextKind::FragmentShaderText(fragment_shader_text))
+        .add(ContextKind::InputFunction(None))
+        .add(ContextKind::VertexArrayObjectData(vao_builder))
+        .build()?;
 
     unsafe {
         context.program.enable();

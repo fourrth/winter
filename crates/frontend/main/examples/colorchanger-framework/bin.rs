@@ -1,23 +1,23 @@
 use glmath::vector::Vector3;
-use std::{ffi::CString, time::Instant};
-use winter::context::Context;
+use std::time::Instant;
+use winter::context::{Context, ContextKind};
 use winter_core::bindings;
 use winter_simple::{
     constructs,
     shapes::{self, Translate},
-    Builder, IndexGrid, IntoDrawable, VertexArrayObject,
+    IndexGrid, IntoDrawable, VertexArrayObject,
 };
 
 fn main() -> Result<(), String> {
     let width = 800;
     let height = 800;
 
-    let title = CString::new("Hello Example Framework!").unwrap();
+    let title = String::from("Hello Example Framework!");
 
     let (vertex_shader_text, fragment_shader_text) = {
         (
-            CString::new(include_str!("vertex_shader.glsl")).unwrap(),
-            CString::new(include_str!("frag_shader.glsl")).unwrap(),
+            String::from(include_str!("vertex_shader.glsl")),
+            String::from(include_str!("frag_shader.glsl")),
         )
     };
 
@@ -48,39 +48,41 @@ fn main() -> Result<(), String> {
         .unwrap()
     };
 
-    let vao_builder: Builder<f32, u32, f32, 3, false> = Builder::create()
-        .add(
-            constructs::PixelGridSolidColorIndividual::new(position, index_grid, color_data)
+    let vao_builder: winter_simple::vao::Builder<f32, u32, f32, 3, false, { bindings::TRIANGLES }> =
+        winter_simple::vao::Builder::create()
+            .add(
+                constructs::PixelGridSolidColorIndividual::new(position, index_grid, color_data)
+                    .into_drawable(),
+            )
+            .add(
+                constructs::RectangleSolidColor::new1(
+                    position.shift(Vector3::from([0.5, 0.0, 0.0])),
+                    color2,
+                )
                 .into_drawable(),
-        )
-        .add(
-            constructs::RectangleSolidColor::new1(
-                position.shift(Vector3::from([0.5, 0.0, 0.0])),
-                color2,
             )
-            .into_drawable(),
-        )
-        .add(
-            constructs::TriangleSolidColor::new1(
-                shapes::Triangle::new(
-                    Vector3::from([0.0, 0.0, 0.0]),
-                    Vector3::from([0.5, 0.0, 0.0]),
-                    Vector3::from([0.5, 0.5, 0.0]),
-                ),
-                color1,
-            )
-            .into_drawable(),
-        );
+            .add(
+                constructs::TriangleSolidColor::new1(
+                    shapes::Triangle::new(
+                        Vector3::from([0.0, 0.0, 0.0]),
+                        Vector3::from([0.5, 0.0, 0.0]),
+                        Vector3::from([0.5, 0.5, 0.0]),
+                    ),
+                    color1,
+                )
+                .into_drawable(),
+            );
 
-    let mut context = Context::new(
-        width,
-        height,
-        title,
-        vertex_shader_text,
-        fragment_shader_text,
-        None,
-        vao_builder,
-    )?;
+    let mut context: Context<
+        winter_simple::vao::Builder<f32, u32, f32, 3, false, { bindings::TRIANGLES }>,
+    > = winter::context::Builder::new()
+        .add(ContextKind::WindowSize(width, height))
+        .add(ContextKind::Title(title))
+        .add(ContextKind::VertexShaderText(vertex_shader_text))
+        .add(ContextKind::FragmentShaderText(fragment_shader_text))
+        .add(ContextKind::InputFunction(None))
+        .add(ContextKind::VertexArrayObjectData(vao_builder))
+        .build()?;
 
     unsafe {
         context.program.enable();

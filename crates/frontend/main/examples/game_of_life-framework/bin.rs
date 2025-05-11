@@ -1,5 +1,4 @@
 use std::{
-    ffi::CString,
     fs::File,
     io::{self, BufWriter, Read, Write},
     sync::atomic::{AtomicBool, AtomicU64, Ordering},
@@ -8,9 +7,9 @@ use std::{
 };
 
 use glmath::{vector::Vector3, Element};
-use winter::context::Context;
+use winter::context::{Context, ContextKind};
 use winter_core::bindings;
-use winter_simple::{constructs, shapes, Builder, IndexGrid, IntoDrawable, VertexArrayObject};
+use winter_simple::{constructs, shapes, vao::Builder, IndexGrid, IntoDrawable, VertexArrayObject};
 const SAVE_FILE_OUTPUT_DIR: &str = "./target/save_data.txt";
 const DEFAULT_TPS: u64 = 10;
 
@@ -143,12 +142,12 @@ fn main() -> Result<(), String> {
         (width, height, arena_size)
     };
 
-    let title = CString::new("Conway's Game of Life").unwrap();
+    let title = String::from("Conway's Game of Life");
 
     let (vertex_shader_text, fragment_shader_text) = {
         (
-            CString::new(include_str!("vertex_shader.glsl")).unwrap(),
-            CString::new(include_str!("frag_shader.glsl")).unwrap(),
+            String::from(include_str!("vertex_shader.glsl")),
+            String::from(include_str!("frag_shader.glsl")),
         )
     };
 
@@ -175,10 +174,11 @@ fn main() -> Result<(), String> {
         Vector3::from([-1.0, 1.0, 0.0]).mul_scalar(0.95),
     );
 
-    let vao_builder: Builder<f32, u32, f32, 3, false> = Builder::create().add(
-        constructs::PixelGridSolidColorIndividual::new(grid_bounds, index_grid, color_data)
-            .into_drawable(),
-    );
+    let vao_builder: Builder<f32, u32, f32, 3, false, { bindings::TRIANGLES }> = Builder::create()
+        .add(
+            constructs::PixelGridSolidColorIndividual::new(grid_bounds, index_grid, color_data)
+                .into_drawable(),
+        );
 
     // pretty sure I have said this before, but this should really all be
     // put into some manager type along with gol context and
@@ -198,56 +198,58 @@ fn main() -> Result<(), String> {
     // some input statics
     static PRESS_LEFT: AtomicBool = AtomicBool::new(false);
     static PRESS_RIGHT: AtomicBool = AtomicBool::new(false);
-
-    let mut context = Context::new(
-        width,
-        height,
-        title,
-        vertex_shader_text,
-        fragment_shader_text,
-        Some(|window, key, _, action, _| unsafe {
-            if action == glfw::ffi::PRESS {
-                if key == glfw::ffi::KEY_ESCAPE {
-                    glfw::ffi::glfwSetWindowShouldClose(window, glfw::ffi::TRUE);
-                } else if key == glfw::ffi::KEY_SPACE {
-                    if GOL_CXT.is_some() {
-                        if TICKING.load(Ordering::Relaxed) == false {
-                            TICKING.store(true, Ordering::Relaxed);
-                        } else {
-                            TICKING.store(false, Ordering::Relaxed);
+    let mut context: Context<
+        winter_simple::vao::Builder<f32, u32, f32, 3, false, { bindings::TRIANGLES }>,
+    > = winter::context::Builder::new()
+        .add(ContextKind::WindowSize(width, height))
+        .add(ContextKind::Title(title))
+        .add(ContextKind::VertexShaderText(vertex_shader_text))
+        .add(ContextKind::FragmentShaderText(fragment_shader_text))
+        .add(ContextKind::InputFunction(Some(
+            |window, key, _, action, _| unsafe {
+                if action == glfw::ffi::PRESS {
+                    if key == glfw::ffi::KEY_ESCAPE {
+                        glfw::ffi::glfwSetWindowShouldClose(window, glfw::ffi::TRUE);
+                    } else if key == glfw::ffi::KEY_SPACE {
+                        if GOL_CXT.is_some() {
+                            if TICKING.load(Ordering::Relaxed) == false {
+                                TICKING.store(true, Ordering::Relaxed);
+                            } else {
+                                TICKING.store(false, Ordering::Relaxed);
+                            }
                         }
-                    }
-                } else if key == glfw::ffi::KEY_ENTER {
-                    DO_RESTART.store(true, Ordering::Relaxed);
-                } else if key == glfw::ffi::KEY_BACKSLASH {
-                    // save the current state
-                    DO_SAVE.store(true, Ordering::Relaxed);
-                } else if key == glfw::ffi::KEY_BACKSPACE {
-                    // set that we should load from file
-                    if SHOULD_LOAD_FROM_FILE.load(Ordering::Relaxed) {
-                        SHOULD_LOAD_FROM_FILE.store(false, Ordering::Relaxed);
+                    } else if key == glfw::ffi::KEY_ENTER {
+                        DO_RESTART.store(true, Ordering::Relaxed);
+                    } else if key == glfw::ffi::KEY_BACKSLASH {
+                        // save the current state
+                        DO_SAVE.store(true, Ordering::Relaxed);
+                    } else if key == glfw::ffi::KEY_BACKSPACE {
+                        // set that we should load from file
+                        if SHOULD_LOAD_FROM_FILE.load(Ordering::Relaxed) {
+                            SHOULD_LOAD_FROM_FILE.store(false, Ordering::Relaxed);
+                        } else {
+                            SHOULD_LOAD_FROM_FILE.store(true, Ordering::Relaxed);
+                        }
+                    } else if key == glfw::ffi::KEY_LEFT {
+                        PRESS_LEFT.store(true, Ordering::Relaxed);
+                        press_left();
+                    } else if key == glfw::ffi::KEY_RIGHT {
+                        PRESS_RIGHT.store(true, Ordering::Relaxed);
+                        press_right();
                     } else {
-                        SHOULD_LOAD_FROM_FILE.store(true, Ordering::Relaxed);
+                        // println!("Key Press: {key}");
                     }
-                } else if key == glfw::ffi::KEY_LEFT {
-                    PRESS_LEFT.store(true, Ordering::Relaxed);
-                    press_left();
-                } else if key == glfw::ffi::KEY_RIGHT {
-                    PRESS_RIGHT.store(true, Ordering::Relaxed);
-                    press_right();
-                } else {
-                    // println!("Key Press: {key}");
+                } else if action == glfw::ffi::RELEASE {
+                    if key == glfw::ffi::KEY_LEFT {
+                        PRESS_LEFT.store(false, Ordering::Relaxed);
+                    } else if key == glfw::ffi::KEY_RIGHT {
+                        PRESS_RIGHT.store(false, Ordering::Relaxed);
+                    }
                 }
-            } else if action == glfw::ffi::RELEASE {
-                if key == glfw::ffi::KEY_LEFT {
-                    PRESS_LEFT.store(false, Ordering::Relaxed);
-                } else if key == glfw::ffi::KEY_RIGHT {
-                    PRESS_RIGHT.store(false, Ordering::Relaxed);
-                }
-            }
-        }),
-        vao_builder,
-    )?;
+            },
+        )))
+        .add(ContextKind::VertexArrayObjectData(vao_builder))
+        .build()?;
 
     unsafe {
         GOL_CXT = Some(create_gol_cxt(arena_size as usize, None));
