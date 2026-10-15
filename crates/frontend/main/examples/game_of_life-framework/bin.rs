@@ -1,3 +1,4 @@
+#![allow(static_mut_refs)]
 use std::{
     fs::File,
     io::{self, BufWriter, Read, Write},

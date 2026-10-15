@@ -3,3 +3,4 @@
 pub mod context;
 pub mod shader;
 pub use glfw;
+pub mod camera;

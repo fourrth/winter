@@ -1,4 +1,4 @@
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 
 use winter_core::{bindings, raw::shader};
 use winter_simple::uniform::GLUniform;
@@ -68,8 +68,8 @@ impl Program {
     pub fn enable(&self) {
         unsafe { bindings::UseProgram(self.id) }
     }
-    pub fn uniform<T, U: GLUniform<T>>(&self, name: &str) -> Option<U> {
-        let out = unsafe { bindings::GetUniformLocation(self.id, name as *const _ as *const i8) };
+    pub fn uniform<T, U: GLUniform<T>>(&self, name: &CStr) -> Option<U> {
+        let out = unsafe { bindings::GetUniformLocation(self.id, name.as_ptr()) };
         U::new(out)
     }
 }

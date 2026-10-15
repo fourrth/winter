@@ -1,5 +1,6 @@
 use glfw::ffi::GLFWwindow;
 use glmath::vector::Vector3;
+use std::ffi::CString;
 use std::io::Write;
 use std::{
     io::{self, stdout, BufWriter},
@@ -137,9 +138,18 @@ fn main() -> Result<(), String> {
         let uniforms = MyUniforms {
             xpos: uniform::Float::from(0),
             ypos: uniform::Float::from(1),
-            width: context.program.uniform("widthu").unwrap(),
-            height: context.program.uniform("heightu").unwrap(),
-            arena_cell_length: context.program.uniform("arena_cell_lengthu").unwrap(),
+            width: context
+                .program
+                .uniform(&CString::new("widthu").unwrap())
+                .unwrap(),
+            height: context
+                .program
+                .uniform(&CString::new("heightu").unwrap())
+                .unwrap(),
+            arena_cell_length: context
+                .program
+                .uniform(&CString::new("arena_cell_lengthu").unwrap())
+                .unwrap(),
         };
 
         glfw::ffi::glfwSwapInterval(0);

@@ -5,6 +5,13 @@ use winter_core::bindings;
 pub type GlfwInputFunction =
     fn(window: *mut GLFWwindow, key: c_int, scancode: c_int, action: c_int, mods: c_int);
 
+pub type GlfwMouseInputFunction =
+    fn(window: *mut GLFWwindow, button: c_int, action: c_int, mods: c_int);
+
+pub type GlfwWindowFocusFunction = fn(window: *mut GLFWwindow, focused: c_int);
+
+pub type GlfwFrameBufferSizeFunction = fn(window: *mut GLFWwindow, width: c_int, height: c_int);
+
 fn proc_loader(str: &'static str) -> *const c_void {
     unsafe {
         let mut name = str.as_bytes().to_vec();
@@ -92,4 +99,36 @@ pub extern "C" fn main_context_keyboard_input(
     // it should be impossible to get here
     // without also setting input_f
     unsafe { USER_KEY_FUNC.unwrap_unchecked()(window, key, scancode, action, mods) }
+}
+
+pub static mut USER_MOUSE_FUNC: Option<GlfwMouseInputFunction> = None;
+
+pub extern "C" fn main_context_mouse_input(
+    window: *mut GLFWwindow,
+    button: c_int,
+    action: c_int,
+    mods: c_int,
+) {
+    // it should be impossible to get here
+    // without also setting input_f
+    unsafe { USER_MOUSE_FUNC.unwrap_unchecked()(window, button, action, mods) }
+}
+pub static mut USER_WINDOW_FOCUS_FUNC: Option<GlfwWindowFocusFunction> = None;
+
+pub extern "C" fn main_context_window_focus(window: *mut GLFWwindow, focused: c_int) {
+    // it should be impossible to get here
+    // without also setting input_f
+    unsafe { USER_WINDOW_FOCUS_FUNC.unwrap_unchecked()(window, focused) }
+}
+
+pub static mut USER_FRAMEBUFFER_SIZE_FUNC: Option<GlfwFrameBufferSizeFunction> = None;
+
+pub extern "C" fn main_context_framebuffer_size(
+    window: *mut GLFWwindow,
+    width: c_int,
+    height: c_int,
+) {
+    // it should be impossible to get here
+    // without also setting input_f
+    unsafe { USER_FRAMEBUFFER_SIZE_FUNC.unwrap_unchecked()(window, width, height) }
 }

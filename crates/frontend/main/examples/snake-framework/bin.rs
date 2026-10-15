@@ -119,8 +119,6 @@ fn main() -> Result<(), String> {
                         unsafe {
                             glfw::ffi::glfwSetWindowShouldClose(window, glfw::ffi::TRUE);
                         }
-                    } else if key == glfw::ffi::KEY_SPACE {
-                        DEBUG_ADD_FOOD_PRESS.store(true, Ordering::Relaxed);
                     } else if key == glfw::ffi::KEY_ENTER {
                         // toggle ticking the snake
                         SHOULD_TICK.fetch_xor(true, Ordering::Relaxed);
@@ -137,10 +135,6 @@ fn main() -> Result<(), String> {
                     } else if key == glfw::ffi::KEY_RIGHT || key == glfw::ffi::KEY_D {
                         let _ = PRESS_KEY.fetch_or(8, Ordering::Relaxed);
                     }
-                } else if action == glfw::ffi::RELEASE {
-                    if key == glfw::ffi::KEY_SPACE {
-                        DEBUG_ADD_FOOD_RELEASE.store(true, Ordering::Relaxed);
-                    }
                 }
             },
         )))
@@ -155,9 +149,6 @@ fn main() -> Result<(), String> {
     static TICKS_PER_SECOND: AtomicU64 = AtomicU64::new(10);
 
     static PRESS_KEY: AtomicU8 = AtomicU8::new(0);
-
-    static DEBUG_ADD_FOOD_PRESS: AtomicBool = AtomicBool::new(false);
-    static DEBUG_ADD_FOOD_RELEASE: AtomicBool = AtomicBool::new(false);
 
     let snake_context = Arc::new(Mutex::new(new_snake(
         ARENA_CELL_LENGTH as u64,
@@ -178,9 +169,6 @@ fn main() -> Result<(), String> {
                 }
 
                 if SHOULD_TICK.load(Ordering::Relaxed) {
-                    if DEBUG_ADD_FOOD_PRESS.load(Ordering::Relaxed) {
-                        cxt.add_part = true;
-                    }
                     match cxt.tick() {
                         snake::GameState::Running => {
                             SHOULD_DIE.store(false, Ordering::Relaxed);
@@ -191,10 +179,6 @@ fn main() -> Result<(), String> {
                             SHOULD_TICK.store(false, Ordering::Relaxed);
                         }
                     };
-                    if DEBUG_ADD_FOOD_RELEASE.load(Ordering::Relaxed) {
-                        cxt.add_part = false;
-                        DEBUG_ADD_FOOD_PRESS.store(false, Ordering::Relaxed)
-                    }
                 }
 
                 let press = PRESS_KEY.load(Ordering::Relaxed);

@@ -361,3 +361,185 @@ impl<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element, const
         Component::new(v_data, c_data, i_data)
     }
 }
+
+/// Solid colored Rectangular Prism
+#[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct RectPrismSolidColor<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element>
+{
+    pub verts: [Vector3<V>; 8],
+    pub color: Vector3<C>, // rgb
+    _i: PhantomData<I>,
+}
+
+impl<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element>
+    RectPrismSolidColor<V, I, C>
+{
+    /// Creates a Rectangular Prism using a corner and displacement magnitudes
+    pub fn new1(base: Vector3<V>, xm: V, ym: V, zm: V, color: Vector3<C>) -> Self {
+        // a Rectangular Prism is just 6 rectangles
+        //first 0,1,2,3 are xz plane, then next 4 are shifted back z
+        let xm_ = Vector3::from([xm, V::zero(), V::zero()]);
+        let ym_ = Vector3::from([V::zero(), ym, V::zero()]);
+        let zm_ = Vector3::from([V::zero(), V::zero(), zm]);
+
+        let base_shifted = base.add(zm_);
+
+        let verts = [
+            base,                           // bottom left
+            base.add(xm_),                  //bottom right
+            base.add(xm_).add(ym_),         // top right
+            base.add(ym_),                  // top left
+            base_shifted,                   // bottom left
+            base_shifted.add(xm_),          //bottom right
+            base_shifted.add(xm_).add(ym_), // top right
+            base_shifted.add(ym_),          // top left
+        ];
+        Self {
+            verts,
+            color,
+            _i: PhantomData,
+        }
+    }
+    /// Creates a Rectangular Prism using a center base and given lengths. So the edge is base + m/2 for example
+    pub fn new2(origin_base: Vector3<V>, xm: V, ym: V, zm: V, color: Vector3<C>) -> Self {
+        // basically just the above comment
+        let base = origin_base.sub(Vector3::from([xm, ym, zm]).div_scalar(V::one() + V::one()));
+        Self::new1(base, xm, ym, zm, color)
+    }
+}
+impl<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element, const L: GLint>
+    IntoDrawable<V, I, C, L> for RectPrismSolidColor<V, I, C>
+{
+    type IntoDrawable = Component<V, I, C, L>;
+    #[inline(always)]
+    fn into_drawable(self) -> Self::IntoDrawable {
+        let v_data = self
+            .verts
+            .into_iter()
+            .map(|v| v.into_iter())
+            .flatten()
+            .collect::<Box<_>>();
+
+        let i_data = [
+            // Face 1: Front
+            [0usize, 1usize, 2usize, 0, 2, 3],
+            // Face 2: Back
+            [4, 5, 6, 4, 6, 7],
+            // Face 3: Left
+            [4, 0, 3, 4, 3, 7],
+            // Face 4: Right
+            [1, 5, 6, 1, 6, 2],
+            // Face 5: Top
+            [3, 2, 6, 3, 6, 7],
+            // Face 6: Bottom
+            [4, 5, 1, 4, 1, 0],
+        ]
+        .into_iter()
+        .flatten()
+        .map(|i| I::from_usize(i))
+        .collect::<Box<_>>();
+        let c_data = self
+            .color
+            .into_iter()
+            .cycle()
+            .take(3 * 8)
+            .collect::<Box<_>>();
+        Component::new(v_data, c_data, i_data)
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct RectPrismMultiColor<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element>
+{
+    pub verts: [Vector3<V>; 8],
+    pub colors: [Vector3<C>; 6], // rgb
+    _i: PhantomData<I>,
+}
+
+impl<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element>
+    RectPrismMultiColor<V, I, C>
+{
+    /// Creates a Rectangular Prism using a corner and displacement magnitudes
+    /// the colors are supplied in the following order:
+    /// front,back,left,right,top,bottom
+    pub fn new1(base: Vector3<V>, xm: V, ym: V, zm: V, colors: [Vector3<C>; 6]) -> Self {
+        // a Rectangular Prism is just 8 points
+        //first 0,1,2,3 are xz plane, then next 4 are shifted back z
+        let xm_ = Vector3::from([xm, V::zero(), V::zero()]);
+        let ym_ = Vector3::from([V::zero(), ym, V::zero()]);
+        let zm_ = Vector3::from([V::zero(), V::zero(), zm]);
+
+        let base_shifted = base.add(zm_);
+
+        let verts = [
+            base,                           // bottom left
+            base.add(xm_),                  //bottom right
+            base.add(xm_).add(ym_),         // top right
+            base.add(ym_),                  // top left
+            base_shifted,                   // bottom left
+            base_shifted.add(xm_),          //bottom right
+            base_shifted.add(xm_).add(ym_), // top right
+            base_shifted.add(ym_),          // top left
+        ];
+        Self {
+            verts,
+            colors,
+            _i: PhantomData,
+        }
+    }
+    /// Creates a Rectangular Prism using a center base and given lengths. So the edge is base + m/2 for example
+    /// the colors are supplied in the following order:
+    /// front,back,left,right,top,bottom
+    pub fn new2(origin_base: Vector3<V>, xm: V, ym: V, zm: V, colors: [Vector3<C>; 6]) -> Self {
+        // basically just the above comment
+        let base = origin_base.sub(Vector3::from([xm, ym, zm]).div_scalar(V::one() + V::one()));
+        Self::new1(base, xm, ym, zm, colors)
+    }
+}
+impl<V: GLVertexType + Element, I: GLIndexType, C: GLVertexType + Element, const L: GLint>
+    IntoDrawable<V, I, C, L> for RectPrismMultiColor<V, I, C>
+{
+    type IntoDrawable = Component<V, I, C, L>;
+    #[inline(always)]
+    fn into_drawable(self) -> Self::IntoDrawable {
+        let vertices = self.verts;
+
+        let colors = self.colors;
+
+        let indices = [
+            // Face 1: Front
+            [0usize, 1usize, 2usize, 0, 2, 3],
+            // Face 2: Back
+            [4, 5, 6, 4, 6, 7],
+            // Face 3: Left
+            [4, 0, 3, 4, 3, 7],
+            // Face 4: Right
+            [1, 5, 6, 1, 6, 2],
+            // Face 5: Top
+            [3, 2, 6, 3, 6, 7],
+            // Face 6: Bottom
+            [4, 5, 1, 4, 1, 0],
+        ];
+
+        let v_data = indices
+            .into_iter()
+            .map(|face| face.into_iter().map(|i| vertices[i].into_iter()).flatten())
+            .flatten()
+            .collect::<Box<_>>();
+
+        let i_data = (0usize..36)
+            .into_iter()
+            .map(|i| I::from_usize(i))
+            .collect::<Box<_>>();
+
+        let c_data = colors
+            .into_iter()
+            .map(|face| face.into_iter().cycle().take(3 * 6))
+            .flatten()
+            .collect::<Box<_>>();
+
+        Component::new(v_data, c_data, i_data)
+    }
+}
