@@ -1,7 +1,12 @@
 [package]
 name = "winter"
-version = "1.6.5"
+version = "1.7.0"
 edition = "2021"
+
+[features]
+default = []
+all = ["serde"]
+serde = ["dep:serde", "winter-core/serde", "winter-simple/serde"]
 
 [lib]
 path = "src/lib.rs"
@@ -33,19 +38,24 @@ path = "examples/colorchanger-framework/bin.rs"
 name = "uniforms-framework"
 path = "examples/uniforms-framework/bin.rs"
 
-[features]
-default = []
-serde = ["winter-simple/serde"]
+[[example]]
+name = "3DCube-framework"
+path = "examples/3DCube-framework/bin.rs"
 
 [dependencies]
-winter-simple ={ workspace = true}
-winter-core ={ workspace = true}
-glfw = {workspace = true}
+winter-simple = { workspace = true }
+winter-core = { workspace = true }
+glfw = { workspace = true }
+nalgebra = { version = "0.34" }
+serde = { version = "1", optional = true }
 
 [dev-dependencies]
-glmath = { workspace = true}
-bytemuck = {workspace = true}
-game_of_life = {workspace = true}
-snake ={workspace = true}
-serde_json = {version = "1.0"}
-once_cell = {version = "1.19"}
+glmath = { workspace = true }
+bytemuck = { workspace = true }
+game_of_life = { workspace = true }
+snake = { workspace = true }
+serde_json = { version = "1.0" }
+once_cell = { version = "1.19" }
+itertools = { version = "0.15" }
+gltf = { version = "1.4" }
+image = { version = "0.25" }

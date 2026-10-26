@@ -1,7 +1,8 @@
 use std::ffi::c_void;
 
+use bytemuck::Pod;
+
 use crate::{
-    bindings::types::GLint,
     buffer::{Guard, VertexBuffer},
     opengl::GLVertexType,
     raw::{self, buffers::BufferTarget},
@@ -13,22 +14,44 @@ use super::Layout;
 /// This VertexBuffer is meant for fast updates
 #[repr(C)]
 #[derive(Debug, Clone)]
-pub struct DynamicData<V: GLVertexType, const L: GLint> {
-    pub layout: Layout<V, L>,
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct DynamicData {
+    pub vertex_count: usize,
+    pub layout: Layout,
     // This VertexBuffer type stores data on the cpu side
     pub data: Vec<u8>,
 }
 
-impl<V: GLVertexType, const L: GLint> DynamicData<V, L> {
+impl DynamicData {
     /// data is whatever you want to put in a VertexBuffer
-    pub fn new<T: GLVertexType>(data: Option<&[T]>, layout: Layout<V, L>) -> Self {
+    pub fn new<T: GLVertexType>(data: Option<&[T]>, layout: Layout) -> Self {
         if let Some(data_) = data {
             Self {
-                data: Vec::from(bytemuck::must_cast_slice::<T, u8>(data_)),
+                // vertex_count: data_.len() / layout.attrib_len as usize,
+                vertex_count: data_.len() / layout.attrib_len as usize,
+                data: bytemuck::must_cast_slice::<T, u8>(data_).to_vec(),
                 layout,
             }
         } else {
             Self {
+                vertex_count: 0,
+                data: vec![],
+                layout,
+            }
+        }
+    }
+
+    pub fn new2<T: Pod>(data: Option<&[T]>, vertex_count: usize, layout: Layout) -> Self {
+        if let Some(data_) = data {
+            let data_b = bytemuck::must_cast_slice::<T, u8>(data_).to_vec();
+            Self {
+                vertex_count: vertex_count,
+                data: data_b,
+                layout,
+            }
+        } else {
+            Self {
+                vertex_count: 0,
                 data: vec![],
                 layout,
             }
@@ -38,15 +61,15 @@ impl<V: GLVertexType, const L: GLint> DynamicData<V, L> {
 
 /// This is the main VertexBuffer type for dynamic vbs
 #[derive(Debug)]
-pub struct DynamicBuffer<V: GLVertexType, const L: GLint, const N: bool> {
-    data: DynamicData<V, L>,
+pub struct DynamicBuffer {
+    data: DynamicData,
     // OpenGL id
     id: Guard,
 }
 
-impl<V: GLVertexType, const L: GLint, const N: bool> DynamicBuffer<V, L, N> {
+impl DynamicBuffer {
     /// Convert's your data into a useable OpenGL object
-    pub fn from(data: DynamicData<V, L>) -> Self {
+    pub fn new(data: DynamicData) -> Self {
         let id: NonZeroUInt = unsafe {
             NonZeroUInt::new(
                 raw::buffers::CreateBuffer(
@@ -67,7 +90,7 @@ impl<V: GLVertexType, const L: GLint, const N: bool> DynamicBuffer<V, L, N> {
         /// Converts a dynamic buffer to a static one.
         /// Use this if the buffer stopped being read very frequently
         /// and you want to free the memory associated with it on the cpu side
-        pub fn to_static(self) -> VertexBufferStatic<V, L> {
+        pub fn to_static(self) -> VertexBufferStatic {
             VertexBufferStatic {
                 id: self.id,
                 layout: self.data.layout,
@@ -78,23 +101,21 @@ impl<V: GLVertexType, const L: GLint, const N: bool> DynamicBuffer<V, L, N> {
     /// Unsafe because it gives you the ability to
     /// 'unsync' OpenGL and our local data storage
     /// and corrupt data
-    pub unsafe fn as_data_mut(&mut self) -> &mut DynamicData<V, L> {
+    pub unsafe fn as_data_mut(&mut self) -> &mut DynamicData {
         &mut self.data
     }
 
     /// Gives you a reference to the inner data
-    pub fn as_data(&self) -> &DynamicData<V, L> {
+    pub fn as_data(&self) -> &DynamicData {
         &self.data
     }
 }
 
-impl<V: GLVertexType, const L: GLint, const N: bool> VertexBuffer<V, L, N>
-    for DynamicBuffer<V, L, N>
-{
+impl VertexBuffer for DynamicBuffer {
     fn id(&self) -> NonZeroUInt {
         self.id.inner
     }
-    fn layout(&self) -> Layout<V, L> {
+    fn layout(&self) -> Layout {
         self.data.layout
     }
 }

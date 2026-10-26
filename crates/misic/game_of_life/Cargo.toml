@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 description = "Conway's Game of life"
 
+[features]
+default = []
+all =[]
+
 [lib]
 path = "game_of_life.rs"
 

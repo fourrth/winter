@@ -1,8 +1,13 @@
 [package]
 name = "winter-core"
-version = "1.6.3"
+version = "1.7.0"
 edition = "2021"
 build = "build.rs"
+
+[features]
+default = []
+serde = ["dep:serde"]
+all = ["serde"]
 
 [lib]
 path = "src/lib.rs"
@@ -24,17 +29,22 @@ path = "examples/simple-raw/bin.rs"
 name = "key_callback-raw"
 path = "examples/key_callback-raw/bin.rs"
 
-[features]
-default = []
+[[example]]
+name = "texture-raw"
+path = "examples/texture-raw/bin.rs"
+
 
 [dev-dependencies]
 rand = {version = "0.8"}
 once_cell = {version = "1.19"}
 glfw ={ workspace = true}
+image ={ version = "0.25"}
 
 [dependencies]
 num-integer ={ version = "0.1"}
+num-traits = {version = "0.2"}
 bytemuck = {workspace = true}
+serde = {version = "1",optional = true,features = ["derive"]}
 
 [build-dependencies]
 gl_generator = { version = "0.14"}

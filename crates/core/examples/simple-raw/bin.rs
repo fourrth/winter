@@ -136,13 +136,13 @@ fn main() -> Result<(), String> {
             } else {
                 // then no good match, log and do default
                 dbg!("Failed to get a good match, using default triangle (options: triangle, square)");
-                DrawKind::Triangle
+                DrawKind::Square
             }
         }
         None => {
             // means no input, do default like above
             dbg!("Failed to get a good match, using default triangle (options: triangle, square)");
-            DrawKind::Triangle
+            DrawKind::Square
         }
     };
     let mut ss = SimpleStruct::new(640, 640, drawkind);
@@ -175,7 +175,7 @@ fn main() -> Result<(), String> {
         )
         .unwrap();
 
-        bindings::BindBuffer(bindings::ARRAY_BUFFER, vb);
+        raw::buffers::BindBuffer(BufferTarget::ArrayBuffer, vb);
 
         bindings::VertexAttribPointer(
             0,
@@ -187,9 +187,9 @@ fn main() -> Result<(), String> {
         );
         bindings::EnableVertexAttribArray(0);
 
-        bindings::BindBuffer(bindings::ELEMENT_ARRAY_BUFFER, ib);
+        raw::buffers::BindBuffer(BufferTarget::ElementArrayBuffer, ib);
 
-        bindings::UseProgram(program);
+        bindings::UseProgram(program.into());
         bindings::BindVertexArray(vao);
 
         while glfw::ffi::glfwWindowShouldClose(ss.window.unwrap()) == 0 {
@@ -209,7 +209,7 @@ fn main() -> Result<(), String> {
         bindings::DeleteVertexArrays(1, &vao);
         bindings::DeleteBuffers(1, &vb);
         bindings::DeleteBuffers(1, &ib);
-        bindings::DeleteProgram(program);
+        bindings::DeleteProgram(program.into());
 
         glfw::ffi::glfwTerminate();
     }

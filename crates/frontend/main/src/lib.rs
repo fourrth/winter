@@ -3,3 +3,6 @@
 pub mod context;
 pub mod shader;
 pub use glfw;
+pub mod billboard;
+pub mod camera;
+pub mod plot2d;

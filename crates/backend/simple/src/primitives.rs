@@ -4,255 +4,132 @@
 //! as they are meant to be the targets to convert into
 //! when drawing a construct.
 
-use std::marker::PhantomData;
+use std::{collections::HashMap, marker::PhantomData};
 
 use winter_core::{
-    bindings::types::GLint,
-    opengl::{GLIndexType, GLVertexType},
+    buffer::{
+        index::IndexBufferDataU32,
+        vertex::{DynamicData, Layout},
+    },
+    opengl::GLVertexType,
 };
 
-use crate::Drawable;
+use crate::{Drawable, IntoDrawable, Mesh};
 
+/// A component is a pos,color, and index mesh with implied
+/// layouts on the verts and colors.
+/// verts and colors are both GLFloat,atrib len 3, and
+/// verts are in loc 0, colors are in loc 1
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Component<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> {
-    data: Box<[u8]>,
-
-    // indices for indexing into data
-    // it is stored by what Drawable is,
-    // but is the layout is:
-    // vertices: [0,c_index)
-    // color: [c_index,i_index)
-    // indices: [i_index,data.len())
-    c_index: usize,
-    i_index: usize,
-
-    _v: PhantomData<V>,
-    _i: PhantomData<I>,
-    _c: PhantomData<C>,
+pub struct Component<V: GLVertexType, C: GLVertexType> {
+    mesh: Mesh,
+    _vb: PhantomData<V>,
+    _cb: PhantomData<C>,
 }
-impl<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> Component<V, I, C, L> {
+impl<V: GLVertexType, C: GLVertexType> Component<V, C> {
     #[inline(always)]
-    pub fn new(v_data: Box<[V]>, c_data: Box<[C]>, i_data: Box<[I]>) -> Self {
-        //TODO: fix this, but later because I am tired of looking at it
-        // basically rust has bad support for unsafe iterator stuff, so
-        // we can't just take in iterators if we want optimizations
-        // rust does have stuff like ExactSizeIterator and the nightly Trustlen,
-        // but they are not perfect (in fact, some I impl the above two
-        // still does not always do what it should optimization wise, so screw them:
-        // we allocate who cares)
+    pub fn new(v_data: Box<[V]>, c_data: Box<[C]>, i_data: Box<[u32]>) -> Self {
+        // these copies are not fully required, but actually are because
+        // the alignment/mem layout is different between Vec<u8> and Vec<V>
+        // the array underneath is the same, but on drop the actual drop is different
+        // really we need to carry the type all the way, but thats not how the api for the
+        // vertex buffers is right now. TODO: do the big refactor please.
 
-        // also, this will get better later on when we bundle the shader stuff together
-        // then we can do SSBOs and maybe some 1D texture stuff:
-        // it will make this a whole lot simpler
-        let v_size = std::mem::size_of_val::<[_]>(v_data.as_ref());
-        let c_size = std::mem::size_of_val::<[_]>(c_data.as_ref());
-        let i_size = std::mem::size_of_val::<[_]>(i_data.as_ref());
+        let v_data_len = v_data.len();
+        let c_data_len = c_data.len();
 
-        let mut data: Vec<u8> = Vec::with_capacity(v_size + c_size + i_size);
+        let v_data_u8 = bytemuck::must_cast_slice::<_, u8>(&v_data).to_vec();
 
-        data.extend(bytemuck::cast_slice::<_, u8>(&v_data));
-        data.extend(bytemuck::cast_slice::<_, u8>(&c_data));
-        data.extend(bytemuck::cast_slice::<_, u8>(&i_data));
+        let c_data_u8 = bytemuck::must_cast_slice::<_, u8>(&c_data).to_vec();
 
-        // LOG POINT
-        // let vertex_data_tmp_compare = bytemuck::cast_slice::<u8, [V; 3]>(&data[0..v_size]);
-        // let color_data_tmp_compare =
-        //     bytemuck::cast_slice::<u8, [C; 3]>(&data[v_size..v_size + c_size]);
-        // let index_data_tmp_compare = bytemuck::cast_slice::<u8, [I; 6]>(&data[v_size + c_size..]);
+        let v_buffer_data = DynamicData {
+            // vertex_count: v_data_len / 3,
+            vertex_count: v_data_len / 3,
+            data: v_data_u8,
+            layout: Layout::new(0, 3, V::to_glenum()),
+        };
+        let c_buffer_data = DynamicData {
+            vertex_count: c_data_len / 3,
+            data: c_data_u8,
+            layout: Layout::new(1, 3, C::to_glenum()),
+        };
+        // dbg!(&v_buffer_data);
 
-        // std::hint::black_box((
-        //     vertex_data_tmp_compare,
-        //     color_data_tmp_compare,
-        //     index_data_tmp_compare,
-        // ));
+        let i_buffer_data = IndexBufferDataU32::new(Some(&i_data));
 
-        Self {
-            data: data.into_boxed_slice(),
-            c_index: v_size,
-            i_index: v_size + c_size,
-            _v: PhantomData,
-            _i: PhantomData,
-            _c: PhantomData,
-        }
+        // let vbs = HashMap::from([(0u32, v_buffer_data), (1u32, c_buffer_data)]);
+        let mut vbs = HashMap::new();
+        vbs.insert(0u32, v_buffer_data);
+        vbs.insert(1u32, c_buffer_data);
+
+        Self::from_buffers(i_buffer_data, vbs)
     }
-    // quick note:
-    // we are kind of setting ourselves
-    // up for failure with the pointer casts
-    // here as we don't really consider alignment
-    // what so ever. What we need to do is add
-    // our own alignment values into our indexes,
-    // but that sounds like too much work.
-    // Instead, I am of the school of thought that
-    // we wait until some really confusing bug comes up
-    // and deal with it then when I am chasing it down
-    // for over a month. Much easier
-    // (plus it won't break on x86 so who really cares...)
     #[inline(always)]
-    fn get_vertices(&self) -> &[V] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.data.as_ptr() as *const V,
-                self.c_index / std::mem::size_of::<V>(),
-            )
-        }
+    pub fn get_vertices(&self) -> &[V] {
+        bytemuck::must_cast_slice(self.mesh.vertex_buffers.get(&0).unwrap().data.as_slice())
     }
     #[inline(always)]
     pub fn get_vertices_mut(&mut self) -> &mut [V] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.data.as_ptr() as *mut V,
-                self.c_index / std::mem::size_of::<V>(),
-            )
-        }
+        bytemuck::must_cast_slice_mut(
+            self.mesh
+                .vertex_buffers
+                .get_mut(&0)
+                .unwrap()
+                .data
+                .as_mut_slice(),
+        )
     }
 
     #[inline(always)]
-    fn get_colors(&self) -> &[C] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.data.as_ptr().add(self.c_index) as *const C,
-                (self.i_index - self.c_index) / std::mem::size_of::<C>(),
-            )
-        }
+    pub fn get_colors(&self) -> &[C] {
+        bytemuck::must_cast_slice(self.mesh.vertex_buffers.get(&1).unwrap().data.as_slice())
     }
     #[inline(always)]
     pub fn get_color_mut(&mut self) -> &mut [C] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.data.as_ptr().add(self.c_index) as *mut C,
-                (self.i_index - self.c_index) / std::mem::size_of::<C>(),
-            )
-        }
+        bytemuck::must_cast_slice_mut(
+            self.mesh
+                .vertex_buffers
+                .get_mut(&1)
+                .unwrap()
+                .data
+                .as_mut_slice(),
+        )
     }
     #[inline(always)]
-    fn get_indices(&self) -> &[I] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.data.as_ptr().add(self.i_index) as *const I,
-                (self.data.len() - self.i_index) / std::mem::size_of::<I>(),
-            )
-        }
+    pub fn get_indices(&self) -> &[u32] {
+        bytemuck::must_cast_slice(self.mesh.index_buffer.data())
     }
     #[inline(always)]
-    pub fn get_indices_mut(&mut self) -> &mut [I] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.data.as_ptr().add(self.i_index) as *mut I,
-                (self.data.len() - self.i_index) / std::mem::size_of::<I>(),
-            )
-        }
+    pub unsafe fn get_indices_mut(&mut self) -> &mut [u32] {
+        bytemuck::must_cast_slice_mut(self.mesh.index_buffer.data_mut().as_mut_slice())
     }
 
-    /// Merge two components together so
-    /// they act as one
-    pub fn merge(self, mut other: Self) -> Self {
-        // This is a pretty naive way of doing it
-        // but the faster way of doing it extends
-        // very well to generalized buffers
-        // (dynamic buffer layouts with some type knowledge
-        // of each buffer type), so I'll just
-        // update it when I update everything else
-        //
-        // also, in the future this could do index optimizations
-        // or maybe that could be separate because that
-        // gets confusing unless you know exactly what
-        // kind of data you are getting and have shader control
-        //
-        // also also, maybe in the future we could have an
-        // arbitrary merge_n component function which would
-        // also be a bit faster for merging many components
-        // i'm not very worried about that right now though
-
-        // note weird stuff can happen if
-        // other's vertices and color are nothing (there aren't any)
-        // but that's not something to worry about now,
-        // as we strictly control how components are created right now
-        //TODO: worry about this, but later
-
-        // We're doing the same index shifting thing from
-        // the builder here. I don't know what to do about it
-        // and how it should actually be implemented.
-        // I feel like a lot of things can be made up of pieces,
-        // and each separate piece can be broken apart and added,
-        // or merged into larger pieces
-        {
-            let indices = other.get_indices_mut();
-            let len: usize = self.get_vertices().len() / L as usize;
-
-            for ca in indices {
-                *ca = *ca + I::from_usize(len);
-            }
-        }
-
-        let (mut vec, self_c_index, self_i_index) =
-            (self.data.into_vec(), self.c_index, self.i_index);
-        let initial_vec_len = vec.len();
-
-        vec.reserve_exact(other.data.len() - (vec.capacity() - initial_vec_len));
-        unsafe { vec.set_len(vec.capacity()) };
-        let new_c_index = self_c_index + other.c_index;
-        let new_i_index = self_i_index + other.i_index;
-
-        unsafe {
-            {
-                let src = other.get_indices();
-                let size = std::mem::size_of_val::<[_]>(src);
-                let dst = vec.as_mut_ptr().add(vec.len()).sub(size);
-                std::ptr::copy_nonoverlapping(src.as_ptr() as *const u8, dst, size);
-            }
-            // move up indices in vec up to copied in
-
-            {
-                let src = vec.as_mut_ptr().add(self_i_index);
-                let dst = vec.as_mut_ptr().add(new_i_index);
-                std::ptr::copy_nonoverlapping(src, dst, initial_vec_len - self_i_index);
-            }
-
-            // now repeat for color
-            {
-                let src = other.get_colors();
-                let size = std::mem::size_of_val::<[_]>(src);
-                let dst = vec.as_mut_ptr().add(new_i_index).sub(size);
-                std::ptr::copy_nonoverlapping(src.as_ptr() as *const u8, dst, size);
-            }
-            {
-                let src = vec.as_mut_ptr().add(self_c_index);
-                let dst = vec.as_mut_ptr().add(new_c_index);
-                std::ptr::copy_nonoverlapping(src, dst, self_i_index - self_c_index);
-            }
-
-            // now our vertices
-            {
-                let src = other.get_vertices();
-                let size = std::mem::size_of_val::<[_]>(src);
-                let dst = vec.as_mut_ptr().add(new_c_index).sub(size);
-                std::ptr::copy_nonoverlapping(src.as_ptr() as *const u8, dst, size);
-            }
-            // and don't move anything for vertices
-            // because we are already there...
-        }
-
-        Self {
-            data: vec.into_boxed_slice(),
-            c_index: new_c_index,
-            i_index: new_i_index,
-            _v: PhantomData,
-            _i: PhantomData,
-            _c: PhantomData,
-        }
+    pub fn to_mesh(self) -> Mesh {
+        let (a, b) = self.get_buffers();
+        Mesh::from_buffers(a, b)
     }
 }
-impl<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> Drawable<V, I, C, L>
-    for Component<V, I, C, L>
-{
-    fn get_vertices(&self) -> &[V] {
-        self.get_vertices()
+impl<V: GLVertexType, C: GLVertexType> Drawable for Component<V, C> {
+    fn from_buffers(
+        index_buffers: IndexBufferDataU32,
+        vertex_buffers: HashMap<u32, DynamicData>,
+    ) -> Self {
+        Self {
+            mesh: Mesh::from_buffers(index_buffers, vertex_buffers),
+            _vb: PhantomData,
+
+            _cb: PhantomData,
+        }
     }
-    fn get_colors(&self) -> &[C] {
-        self.get_colors()
+    fn get_buffers(self) -> (IndexBufferDataU32, HashMap<u32, DynamicData>) {
+        self.mesh.get_buffers()
     }
-    fn get_indices(&self) -> &[I] {
-        self.get_indices()
+}
+// how can i make this an automatic implmentation for the trait??
+impl<V: GLVertexType, C: GLVertexType> IntoDrawable for Component<V, C> {
+    type IntoDrawable = Self;
+    fn into_drawable(self) -> Self::IntoDrawable {
+        self
     }
 }

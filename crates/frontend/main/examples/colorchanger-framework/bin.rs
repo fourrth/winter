@@ -48,41 +48,39 @@ fn main() -> Result<(), String> {
         .unwrap()
     };
 
-    let vao_builder: winter_simple::vao::Builder<f32, u32, f32, 3, false, { bindings::TRIANGLES }> =
-        winter_simple::vao::Builder::create()
-            .add(
-                constructs::PixelGridSolidColorIndividual::new(position, index_grid, color_data)
-                    .into_drawable(),
-            )
-            .add(
-                constructs::RectangleSolidColor::new1(
-                    position.shift(Vector3::from([0.5, 0.0, 0.0])),
-                    color2,
-                )
+    let vao_builder: winter_simple::VaoSimple<f32, f32> = winter_simple::VaoSimple::create()
+        .add(
+            constructs::PixelGridSolidColorIndividual::new(position, index_grid, color_data)
                 .into_drawable(),
+        )
+        .add(
+            constructs::RectangleSolidColor::<f32, f32>::new1(
+                position.shift(Vector3::from([0.5, 0.0, 0.0])),
+                color2,
             )
-            .add(
-                constructs::TriangleSolidColor::new1(
-                    shapes::Triangle::new(
-                        Vector3::from([0.0, 0.0, 0.0]),
-                        Vector3::from([0.5, 0.0, 0.0]),
-                        Vector3::from([0.5, 0.5, 0.0]),
-                    ),
-                    color1,
-                )
-                .into_drawable(),
-            );
+            .into_drawable(),
+        )
+        .add(
+            constructs::TriangleSolidColor::<f32, f32>::new1(
+                shapes::Triangle::new(
+                    Vector3::from([0.0, 0.0, 0.0]),
+                    Vector3::from([0.5, 0.0, 0.0]),
+                    Vector3::from([0.5, 0.5, 0.0]),
+                ),
+                color1,
+            )
+            .into_drawable(),
+        );
 
-    let mut context: Context<
-        winter_simple::vao::Builder<f32, u32, f32, 3, false, { bindings::TRIANGLES }>,
-    > = winter::context::Builder::new()
-        .add(ContextKind::WindowSize(width, height))
-        .add(ContextKind::Title(title))
-        .add(ContextKind::VertexShaderText(vertex_shader_text))
-        .add(ContextKind::FragmentShaderText(fragment_shader_text))
-        .add(ContextKind::InputFunction(None))
-        .add(ContextKind::VertexArrayObjectData(vao_builder))
-        .build()?;
+    let mut context: Context<winter_simple::VaoSimple<f32, f32>> =
+        winter::context::Builder::new()
+            .add(ContextKind::WindowSize(width, height))
+            .add(ContextKind::Title(title))
+            .add(ContextKind::VertexShaderText(vertex_shader_text))
+            .add(ContextKind::FragmentShaderText(fragment_shader_text))
+            .add(ContextKind::InputFunction(None))
+            .add(ContextKind::VertexArrayObjectData(vao_builder))
+            .build()?;
 
     unsafe {
         context.program.enable();

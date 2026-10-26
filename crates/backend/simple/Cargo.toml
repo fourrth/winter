@@ -1,6 +1,6 @@
 [package]
 name = "winter-simple"
-version = "1.6.5"
+version = "1.7.0"
 edition = "2021"
 
 [lib]
@@ -9,7 +9,8 @@ crate-type = ["lib"]
 
 [features]
 default = []
-serde = ["dep:serde","glmath/serde"]
+all = ["serde"]
+serde = ["dep:serde","winter-core/serde","glmath/serde"]
 
 [dependencies]
 winter-core = {workspace = true}

@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 description = "Iconic snake game!"
 
+[features]
+default = []
+all =[]
+
 [lib]
 path = "snake.rs"
 

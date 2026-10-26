@@ -1,31 +1,29 @@
-use crate::{
-    bindings::types::{GLint, GLuint},
-    opengl::GLVertexType,
-};
-
-use std::marker::PhantomData;
+use crate::bindings::types::{GLenum, GLint, GLuint};
 
 mod dynamic;
 pub use dynamic::*;
 
-mod stati;
-pub use stati::*;
+mod r#static;
+pub use r#static::*;
 
 // Know that for layout:
 // we always normalize
 // we only do one attrib per VertexBuffer
 #[repr(C)]
-#[derive(Debug, Clone, Copy)]
-pub struct Layout<V: GLVertexType, const L: GLint> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Layout {
     pub attrib_loc: GLuint, // layout location in shader
-    _v: PhantomData<V>,
+    pub attrib_len: GLint,
+    pub ty: GLenum,
 }
 
-impl<V: GLVertexType, const L: GLint> Layout<V, L> {
-    pub fn new(attrib_loc: GLuint) -> Self {
+impl Layout {
+    pub fn new(attrib_loc: GLuint, attrib_len: GLint, ty: GLenum) -> Self {
         Self {
             attrib_loc,
-            _v: PhantomData,
+            attrib_len,
+            ty,
         }
     }
 }

@@ -1,8 +1,11 @@
 use std::{mem::MaybeUninit, ptr};
 
-use crate::bindings::{
-    self,
-    types::{GLchar, GLenum, GLint, GLsizei, GLuint},
+use crate::{
+    bindings::{
+        self,
+        types::{GLchar, GLenum, GLint, GLsizei, GLuint},
+    },
+    NonZeroUInt,
 };
 #[allow(invalid_value)]
 fn Message_Error_Helper(
@@ -32,36 +35,50 @@ pub unsafe fn CreateShader(
     SHADERTYPE: GLuint,
     source: *const i8,
     source_len: GLint,
-) -> Result<GLuint, String> {
+) -> Result<NonZeroUInt, String> {
     unsafe {
         let id: GLuint = bindings::CreateShader(SHADERTYPE);
-        bindings::ShaderSource(id, 1, &source, &source_len);
-        bindings::CompileShader(id);
+        if let Some(shader) = NonZeroUInt::new(id) {
+            bindings::ShaderSource(shader.into(), 1, &source, &source_len);
+            bindings::CompileShader(shader.into());
 
-        #[cfg(debug_assertions)]
-        {
-            let mut result: GLint = MaybeUninit::uninit().assume_init();
-            bindings::GetShaderiv(id, bindings::COMPILE_STATUS, &mut result as *mut GLint);
+            #[cfg(debug_assertions)]
+            {
+                let mut result: GLint = 0;
+                bindings::GetShaderiv(
+                    shader.into(),
+                    bindings::COMPILE_STATUS,
+                    &mut result as *mut GLint,
+                );
 
-            if result == 0 {
-                let msg_str =
-                    Message_Error_Helper(id, bindings::GetShaderiv, bindings::GetShaderInfoLog);
+                if result == 0 {
+                    let msg_str = Message_Error_Helper(
+                        shader.into(),
+                        bindings::GetShaderiv,
+                        bindings::GetShaderInfoLog,
+                    );
 
-                DeleteShader(id);
-                match SHADERTYPE {
-                    bindings::FRAGMENT_SHADER => {
-                        return Err(format!("Error in Fragment Shader; {}\n", msg_str));
-                    }
-                    bindings::VERTEX_SHADER => {
-                        return Err(format!("Error in Vertex Shader; {}\n", msg_str))
-                    }
-                    _ => {
-                        return Err(format!("Error: SHADERTYPE: {:#X}; {}", SHADERTYPE, msg_str));
+                    DeleteShader(shader.into());
+                    match SHADERTYPE {
+                        bindings::FRAGMENT_SHADER => {
+                            return Err(format!("Error in Fragment Shader; {}\n", msg_str));
+                        }
+                        bindings::VERTEX_SHADER => {
+                            return Err(format!("Error in Vertex Shader; {}\n", msg_str))
+                        }
+                        _ => {
+                            return Err(format!(
+                                "Error: SHADERTYPE: {:#X}; {}",
+                                SHADERTYPE, msg_str
+                            ));
+                        }
                     }
                 }
             }
+            Ok(shader)
+        } else {
+            Err("Could not create shader :(".to_string())
         }
-        Ok(id)
     }
 }
 
@@ -76,7 +93,7 @@ pub unsafe fn CreateProgram(
     vertex_shader_text_len: GLint,
     fragment_shader_text: *const i8,
     fragment_shader_text_len: GLint,
-) -> Result<GLuint, String> {
+) -> Result<NonZeroUInt, String> {
     unsafe {
         let vertex_shader = match CreateShader(
             bindings::VERTEX_SHADER,
@@ -95,58 +112,60 @@ pub unsafe fn CreateProgram(
             Ok(val) => val,
             E => return E,
         };
-
-        let program: GLuint = match bindings::CreateProgram() {
-            0 => {
-                return Err(String::from("Could Not Create Program"));
-            }
-            val => val,
-        };
-
-        bindings::AttachShader(program, vertex_shader);
-        bindings::AttachShader(program, fragment_shader);
-
-        bindings::LinkProgram(program);
-
-        #[cfg(debug_assertions)]
         {
-            let mut result: GLint = 0;
+            let id = bindings::CreateProgram();
+            if let Some(program) = NonZeroUInt::new(id) {
+                bindings::AttachShader(program.into(), vertex_shader.into());
+                bindings::AttachShader(program.into(), fragment_shader.into());
 
-            bindings::GetProgramiv(program, bindings::LINK_STATUS, &mut result as *mut GLint);
+                bindings::LinkProgram(program.into());
 
-            if result == 0 {
-                // if we did not link correctly
+                #[cfg(debug_assertions)]
+                {
+                    let mut result: GLint = 0;
 
-                let msg_str = Message_Error_Helper(
-                    program,
-                    bindings::GetProgramiv,
-                    bindings::GetProgramInfoLog,
-                );
+                    bindings::GetProgramiv(
+                        program.into(),
+                        bindings::LINK_STATUS,
+                        &mut result as *mut GLint,
+                    );
 
-                return Err(format!("Error Linking Program; {}", msg_str));
-            }
+                    if result == 0 {
+                        // if we did not link correctly
 
-            bindings::ValidateProgram(program);
-            bindings::GetProgramiv(
-                program,
-                bindings::VALIDATE_STATUS,
-                &mut result as *mut GLint,
-            );
-            if result == 0 {
-                let msg_str = Message_Error_Helper(
-                    program,
-                    bindings::GetProgramiv,
-                    bindings::GetProgramInfoLog,
-                );
+                        let msg_str = Message_Error_Helper(
+                            program.into(),
+                            bindings::GetProgramiv,
+                            bindings::GetProgramInfoLog,
+                        );
 
-                return Err(format!("Error Validating Program; {}", msg_str));
+                        return Err(format!("Error Linking Program; {}", msg_str));
+                    }
+
+                    bindings::ValidateProgram(program.into());
+                    bindings::GetProgramiv(
+                        program.into(),
+                        bindings::VALIDATE_STATUS,
+                        &mut result as *mut GLint,
+                    );
+                    if result == 0 {
+                        let msg_str = Message_Error_Helper(
+                            program.into(),
+                            bindings::GetProgramiv,
+                            bindings::GetProgramInfoLog,
+                        );
+
+                        return Err(format!("Error Validating Program; {}", msg_str));
+                    }
+                }
+
+                DeleteShader(vertex_shader.into());
+                DeleteShader(fragment_shader.into());
+                Ok(program.into())
+            } else {
+                return Err(format!("Could Not Create Program"));
             }
         }
-
-        DeleteShader(vertex_shader);
-        DeleteShader(fragment_shader);
-
-        Ok(program)
     }
 }
 

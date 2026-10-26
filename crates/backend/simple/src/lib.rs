@@ -41,13 +41,15 @@ pub use glmath;
 pub use winter_core::vao::VertexArrayObject;
 
 use winter_core::{
-    bindings::types::GLint,
-    buffer::{index, vertex},
-    opengl::{GLIndexType, GLVertexType},
+    buffer::{
+        index::{self, IndexBufferDataU32},
+        vertex::{self, DynamicData},
+    },
+    opengl::GLVertexType,
     raw, NonZeroUInt,
 };
 
-use std::{fmt::Debug, marker::PhantomData};
+use std::{collections::HashMap, fmt::Debug, marker::PhantomData};
 
 //TODO: find a place to put this that makes sense
 pub struct IndexGrid<I> {
@@ -74,8 +76,8 @@ impl<I> IndexGrid<I> {
 }
 
 #[derive(Debug)]
-struct Guard {
-    inner: NonZeroUInt,
+pub struct Guard {
+    pub inner: NonZeroUInt,
 }
 impl Drop for Guard {
     fn drop(&mut self) {
@@ -84,43 +86,69 @@ impl Drop for Guard {
 }
 
 /// Trait for all drawable things
-///
-/// All things that implement drawable
-/// are themselves ready to be drawn.
-/// This means any higher level types
-/// should really be converted into their base
-/// representations before implementing [`Drawable`]
-pub trait Drawable<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint>:
-    Debug
-{
-    fn get_vertices(&self) -> &[V];
+pub trait Drawable: Debug + Sized + IntoDrawable {
+    fn from_buffers(index: IndexBufferDataU32, vbs: HashMap<u32, DynamicData>) -> Self;
+    fn get_buffers(self) -> (IndexBufferDataU32, HashMap<u32, DynamicData>);
+    fn merge(self, other: impl Drawable) -> Self {
+        let (other_index_buffer, other_vbs) = other.into_drawable().get_buffers();
+        assert_ne!(other_vbs.len(), 0);
+        let (our_index_buffer, mut our_vbs) = self.get_buffers();
 
-    /// if none, then it is inferred that
-    /// your vertices are in GL_TRIANGLES form
-    fn get_indices(&self) -> &[I];
-    fn get_colors(&self) -> &[C];
+        // merge our vbs with their vbs
+        for (other_key, other_buffer) in other_vbs {
+            if let Some(val) = our_vbs.get_mut(&other_key) {
+                debug_assert_eq!(val.layout, other_buffer.layout);
+                val.data.extend_from_slice(&other_buffer.data);
+                val.vertex_count = val.vertex_count + other_buffer.vertex_count;
+            } else {
+                // then we have not had that key yet,
+                // so do 0 + other,.. == other
+                our_vbs.insert(other_key, other_buffer);
+            }
+        }
+
+        debug_assert_eq!(our_index_buffer.ty(), other_index_buffer.ty());
+
+        let combined_index = our_index_buffer.merge(other_index_buffer);
+        Self::from_buffers(combined_index, our_vbs)
+    }
 }
-pub trait IntoDrawable<V: GLVertexType, I: GLIndexType, C: GLVertexType, const L: GLint> {
-    type IntoDrawable: Drawable<V, I, C, L>;
+pub trait IntoDrawable {
+    type IntoDrawable: Drawable;
     fn into_drawable(self) -> Self::IntoDrawable;
 }
 
-/// Note L is the attrib len for both pos and color
 #[derive(Debug)]
-pub struct Vao<
-    V: GLVertexType,
-    I: GLIndexType,
-    C: GLVertexType,
-    const L: GLint,
-    const N: bool,
-    const M: u32,
-> {
-    id: Guard,
-    position_vb: vertex::DynamicBuffer<V, L, N>,
-    color_vb: vertex::DynamicBuffer<C, 3, N>,
-    index_buffer: index::IndexBuffer,
+pub struct Vao<V: GLVertexType, C: GLVertexType> {
+    pub id: Guard,
+    pub position_vb: vertex::DynamicBuffer,
+    pub color_vb: vertex::DynamicBuffer,
+    pub index_buffer: index::IndexBuffer,
+    pub _pb: PhantomData<V>,
+    pub _cb: PhantomData<C>,
+}
+
+// does the key need to be u32? or can it be real generic
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Mesh {
+    pub vertex_buffers: HashMap<u32, vertex::DynamicData>,
+    pub index_buffer: index::IndexBufferDataU32,
+}
+
+#[derive(Debug, Clone)]
+pub struct VaoSimple<V: GLVertexType, C: GLVertexType> {
+    pub vertex_data: DynamicData,
+    pub index_data: IndexBufferDataU32,
+    pub color_data: DynamicData,
 
     _pb: PhantomData<V>,
-    _ib: PhantomData<I>,
     _cb: PhantomData<C>,
+}
+
+#[derive(Debug)]
+pub struct VaoGeneric {
+    id: Guard,
+    pub vertex_buffers: HashMap<u32, vertex::DynamicBuffer>,
+    pub index_buffer: index::IndexBuffer,
 }

@@ -6,7 +6,7 @@ use winter_core::bindings;
 use winter_simple::{
     constructs,
     shapes::{self, Translate},
-    IntoDrawable, VertexArrayObject,
+    Drawable, IntoDrawable, VertexArrayObject,
 };
 #[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Hash)]
 pub enum DrawKind {
@@ -55,12 +55,12 @@ fn main() -> Result<(), String> {
             if let Some(&kind_) = DRAW_KIND_MAP.get(kind_.to_ascii_lowercase().as_str()) {
                 kind_
             } else {
-                println!("DrawKind unknown: using Square");
-                DrawKind::Square
+                println!("DrawKind unknown: using Triangles");
+                DrawKind::Triangles
             }
         } else {
-            println!("DrawKind unknown: using Square");
-            DrawKind::Square
+            println!("DrawKind unknown: using Triangles");
+            DrawKind::Triangles
         };
 
         (width, height, kind)
@@ -96,21 +96,17 @@ fn main() -> Result<(), String> {
     let color1 = Vector3::from([0.0, 1.0, 1.0]);
     let color2 = Vector3::from([1.0, 0.0, 1.0]);
 
-    let tri_left_comp = constructs::TriangleSolidColor::new1(tri_left, color1).into_drawable();
-    let tri_right_comp = constructs::TriangleSolidColor::new1(tri_right, color2).into_drawable();
+    let tri_left_comp: winter_simple::primitives::Component<f32, f32> =
+        constructs::TriangleSolidColor::new1(tri_left, color1).into_drawable();
+    let tri_right_comp: winter_simple::primitives::Component<f32, f32> =
+        constructs::TriangleSolidColor::new1(tri_right, color2).into_drawable();
 
-    let mut vao_builder: winter_simple::vao::Builder<
-        f32,
-        u32,
-        f32,
-        3,
-        false,
-        { bindings::TRIANGLES },
-    > = winter_simple::vao::Builder::create();
+    let mut vao_builder: winter_simple::VaoSimple<f32, f32> = winter_simple::VaoSimple::create();
     match kind {
         DrawKind::Square => {
-            vao_builder = vao_builder
-                .add(constructs::RectangleSolidColor::new1(rect, color1).into_drawable());
+            vao_builder = vao_builder.add(
+                constructs::RectangleSolidColor::<f32, f32>::new1(rect, color1).into_drawable(),
+            );
         }
         DrawKind::Triangles => vao_builder = vao_builder.add(tri_left_comp).add(tri_right_comp),
         DrawKind::TrianglesMerged => {
@@ -118,9 +114,7 @@ fn main() -> Result<(), String> {
         }
     }
 
-    let mut context: Context<
-        winter_simple::vao::Builder<f32, u32, f32, 3, false, { bindings::TRIANGLES }>,
-    > = winter::context::Builder::new()
+    let mut context: Context<winter_simple::VaoSimple<f32, f32>> = winter::context::Builder::new()
         .add(ContextKind::WindowSize(width, height))
         .add(ContextKind::Title(title))
         .add(ContextKind::VertexShaderText(vertex_shader_text))

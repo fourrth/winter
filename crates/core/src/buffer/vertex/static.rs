@@ -1,7 +1,6 @@
 use std::ffi::c_void;
 
 use crate::{
-    bindings::types::GLint,
     buffer::{Guard, VertexBuffer},
     opengl::GLVertexType,
     raw::{self, buffers::BufferTarget},
@@ -12,10 +11,11 @@ use super::{DynamicBuffer, Layout};
 
 #[repr(C)]
 #[derive(Debug, Clone)]
-pub struct StaticData<V: GLVertexType, const L: GLint> {
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct StaticData {
     // we do need to know how the data is
     // actually formatted though
-    pub layout: Layout<V, L>,
+    pub layout: Layout,
 
     // This VertexBuffer does not store it's data
     // past the time it is first initialized
@@ -24,9 +24,9 @@ pub struct StaticData<V: GLVertexType, const L: GLint> {
     pub data: Vec<u8>,
 }
 
-impl<V: GLVertexType, const L: GLint> StaticData<V, L> {
+impl StaticData {
     /// data is whatever you want to put in a VertexBuffer
-    pub fn new<T: GLVertexType>(data: Option<&[T]>, layout: Layout<V, L>) -> Self {
+    pub fn new<T: GLVertexType>(data: Option<&[T]>, layout: Layout) -> Self {
         if let Some(data_) = data {
             Self {
                 data: Vec::from(bytemuck::must_cast_slice::<T, u8>(data_)),
@@ -42,15 +42,14 @@ impl<V: GLVertexType, const L: GLint> StaticData<V, L> {
 }
 
 /// VertexBuffer meant for static data with infrequent updates.
-#[derive(Debug)]
-pub struct StaticBuffer<V: GLVertexType, const L: GLint, const N: bool> {
+pub struct StaticBuffer {
     id: Guard,
-    layout: Layout<V, L>,
+    layout: Layout,
 }
 
-impl<V: GLVertexType, const L: GLint, const N: bool> StaticBuffer<V, L, N> {
+impl StaticBuffer {
     /// Convert's your data into a useable OpenGL object
-    pub fn from(data: StaticData<V, L>) -> Self {
+    pub fn from(data: StaticData) -> Self {
         let id = unsafe {
             NonZeroUInt::new(
                 raw::buffers::CreateBuffer(
@@ -70,7 +69,7 @@ impl<V: GLVertexType, const L: GLint, const N: bool> StaticBuffer<V, L, N> {
 
     /// Converts static VertexBuffer to a dynamic one
     /// for frequent writes
-    pub fn to_dynamic(self) -> DynamicBuffer<V, L, N> {
+    pub fn to_dynamic(self) -> DynamicBuffer {
         // It should be possible to copy the data
         // from OpenGL to get it back on the cpu side
         // not important now but might be nice later on
@@ -78,13 +77,11 @@ impl<V: GLVertexType, const L: GLint, const N: bool> StaticBuffer<V, L, N> {
     }
 }
 
-impl<V: GLVertexType, const L: GLint, const N: bool> VertexBuffer<V, L, N>
-    for StaticBuffer<V, L, N>
-{
+impl VertexBuffer for StaticBuffer {
     fn id(&self) -> NonZeroUInt {
         self.id.inner
     }
-    fn layout(&self) -> Layout<V, L> {
+    fn layout(&self) -> Layout {
         self.layout
     }
 }

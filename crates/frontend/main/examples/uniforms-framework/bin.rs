@@ -1,5 +1,6 @@
 use glfw::ffi::GLFWwindow;
 use glmath::vector::Vector3;
+use std::ffi::CString;
 use std::io::Write;
 use std::{
     io::{self, stdout, BufWriter},
@@ -87,15 +88,12 @@ fn main() -> Result<(), String> {
         .unwrap()
     };
 
-    let vao_builder: winter_simple::vao::Builder<f32, u32, f32, 3, false, { bindings::TRIANGLES }> =
-        winter_simple::vao::Builder::create().add(
-            constructs::PixelGridSolidColorIndividual::new(position, index_grid, color_data)
-                .into_drawable(),
-        );
+    let vao_builder: winter_simple::VaoSimple<f32, f32> = winter_simple::VaoSimple::create().add(
+        constructs::PixelGridSolidColorIndividual::new(position, index_grid, color_data)
+            .into_drawable(),
+    );
 
-    let mut context: Context<
-        winter_simple::vao::Builder<f32, u32, f32, 3, false, { bindings::TRIANGLES }>,
-    > = winter::context::Builder::new()
+    let mut context: Context<winter_simple::VaoSimple<f32, f32>> = winter::context::Builder::new()
         .add(ContextKind::WindowSize(width, height))
         .add(ContextKind::Title(title))
         .add(ContextKind::VertexShaderText(vertex_shader_text))
@@ -137,9 +135,18 @@ fn main() -> Result<(), String> {
         let uniforms = MyUniforms {
             xpos: uniform::Float::from(0),
             ypos: uniform::Float::from(1),
-            width: context.program.uniform("widthu").unwrap(),
-            height: context.program.uniform("heightu").unwrap(),
-            arena_cell_length: context.program.uniform("arena_cell_lengthu").unwrap(),
+            width: context
+                .program
+                .uniform(&CString::new("widthu").unwrap())
+                .unwrap(),
+            height: context
+                .program
+                .uniform(&CString::new("heightu").unwrap())
+                .unwrap(),
+            arena_cell_length: context
+                .program
+                .uniform(&CString::new("arena_cell_lengthu").unwrap())
+                .unwrap(),
         };
 
         glfw::ffi::glfwSwapInterval(0);

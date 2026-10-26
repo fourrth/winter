@@ -18,9 +18,6 @@ Now you may use cargo like any other project, for example:
 cargo r --example snake-framework -- 1200 1200
 ```
 
-Currently, winter is not very usable for other crates. The only supported use is to use the crate through the provided examples.
-Please refer to this readme for more details on building/usage
-
 ### OpenGL
 
 This crate targets OpenGL gles 3.2 core, however the bindings will almost certainly work 
@@ -29,7 +26,7 @@ if you have OpenGL gl 4+
 ## Features
 
 This crate uses features to switch on and off certain parts of the crate.
-The following is a comprehensive list of all the features this crate offers:
+The following is a list of all the features this crate offers:
 
 ### raw
 
@@ -60,10 +57,7 @@ Here are some quick notes and features:
  - *KEY_ESCAPE* closes the window
  - *KEY_ENTER* starts the game
  - *KEY_W*, *KEY_A*, *KEY_S*, *KEY_D* (along with the arrow keys) move the snake around
- - ~~Allows you to run into your self if you go in the opposite direction you currently going~~. I actually run into this on accident a lot, so I actually bothered to fix this one
  - Infinite bounds, so no running into walls
- - Secret debug action if you find the key to do it
- - Simple move buffer
 
 ### game_of_life-framework
 
@@ -78,24 +72,6 @@ Not very complete, but has more features than snake:
    - basically, if you press *KEY_ENTER* normally, it generates the new state randomly. However, if you press backspace, you will load the state you saved previously
    - Note this also provides the great feature that it will crash if you have not saved before trying to load a saved state
  - *KEY_LEFT* and *KEY_RIGHT* decrease and increase the generations per second respectively 
-
-## Upcoming Versions of Note
-
-### v2.0 and Beyond
-
-v2.0 and anything past it will more-or-less be the final form of the crate.
-The end goal of this crate is to split it up into multiple different ones
-which fill various users' needs.
-
-For example, the main crate here will be the engine and raw code,
-which will mostly be traits. However, the main context will reside here 
-and will utilize the aforementioned traits. This allows easy access
-to the engine code, which would allow someone to build their framework
-with specific access to particular engine code.
-
-Various implementation crates will be provided which allow the user
-easy access to use the engine. The user may also give their own
-implementation to more better suit their needs.
 
 ## Compatibility
 

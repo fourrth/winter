@@ -1,4 +1,4 @@
-#![allow(non_snake_case)]
+#![allow(non_snake_case, static_mut_refs)]
 
 use glfw::ffi::GLFWwindow;
 use once_cell::sync::Lazy;
@@ -179,18 +179,19 @@ fn main() -> Result<(), String> {
             std::ptr::null(),
         );
         let vertPositionL: GLint =
-            bindings::GetAttribLocation(program, b"vertPosition\0".as_ptr() as *const i8);
+            bindings::GetAttribLocation(program.into(), b"vertPosition\0".as_ptr() as *const i8);
         assert!(vertPositionL != -1);
         bindings::EnableVertexAttribArray(vertPositionL as GLuint);
 
         let mut time: Instant;
-        let timeuL: GLint = bindings::GetUniformLocation(program, b"timeu\0".as_ptr() as *const i8);
+        let timeuL: GLint =
+            bindings::GetUniformLocation(program.into(), b"timeu\0".as_ptr() as *const i8);
         if timeuL == -1 {
             return Err(String::from("Could not Get the Location of time uniform"));
         }
 
         bindings::BindBuffer(bindings::ELEMENT_ARRAY_BUFFER, ib);
-        bindings::UseProgram(program);
+        bindings::UseProgram(program.into());
         bindings::BindVertexArray(vao);
         let time_start = Instant::now();
         while glfw::ffi::glfwWindowShouldClose(ss.window.unwrap()) == 0 {
@@ -215,7 +216,7 @@ fn main() -> Result<(), String> {
         raw::buffers::DeleteVertexArray(vao);
         raw::buffers::DeleteBuffer(vb);
         raw::buffers::DeleteBuffer(ib);
-        raw::shader::DeleteProgram(program);
+        raw::shader::DeleteProgram(program.into());
 
         glfw::ffi::glfwTerminate();
     }

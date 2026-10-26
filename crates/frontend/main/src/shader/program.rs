@@ -1,6 +1,6 @@
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 
-use winter_core::{bindings, raw::shader};
+use winter_core::{bindings, raw::shader, NonZeroUInt};
 use winter_simple::uniform::GLUniform;
 
 pub enum ProgramKind {
@@ -61,21 +61,24 @@ impl Builder {
 
 #[derive(Debug)]
 pub struct Program {
-    id: u32,
+    id: NonZeroUInt,
 }
 
 impl Program {
-    pub fn enable(&self) {
-        unsafe { bindings::UseProgram(self.id) }
+    pub fn id(&self) -> NonZeroUInt {
+        self.id
     }
-    pub fn uniform<T, U: GLUniform<T>>(&self, name: &str) -> Option<U> {
-        let out = unsafe { bindings::GetUniformLocation(self.id, name as *const _ as *const i8) };
+    pub fn enable(&self) {
+        unsafe { bindings::UseProgram(self.id.into()) }
+    }
+    pub fn uniform<T, U: GLUniform<T>>(&self, name: &CStr) -> Option<U> {
+        let out = unsafe { bindings::GetUniformLocation(self.id.into(), name.as_ptr()) };
         U::new(out)
     }
 }
 
 impl Drop for Program {
     fn drop(&mut self) {
-        unsafe { shader::DeleteProgram(self.id) };
+        unsafe { shader::DeleteProgram(self.id.into()) };
     }
 }

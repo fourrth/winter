@@ -1,13 +1,20 @@
 use std::{ffi::CString, mem::ManuallyDrop};
 
-use glfw::ffi::GLFWkeyfun;
+use glfw::ffi::{GLFWframebuffersizefun, GLFWkeyfun, GLFWmousebuttonfun, GLFWwindowfocusfun};
 use winter_core::vao::{VertexArrayObject, VertexArrayObjectData};
 
-use crate::shader::program::{self, Program, ProgramKind};
+use crate::{
+    context::window::{
+        main_context_framebuffer_size, main_context_mouse_input, main_context_window_focus,
+        GlfwFrameBufferSizeFunction, GlfwMouseInputFunction, GlfwWindowFocusFunction,
+        USER_FRAMEBUFFER_SIZE_FUNC, USER_MOUSE_FUNC, USER_WINDOW_FOCUS_FUNC,
+    },
+    shader::program::{self, Program, ProgramKind},
+};
 
 use self::window::{main_context_keyboard_input, GlfwInputFunction, USER_KEY_FUNC};
 
-mod window;
+pub mod window;
 use window::Window;
 
 /// The arguments to be passed into the context builder.
@@ -16,11 +23,15 @@ use window::Window;
 /// have b'\0' inside will have them
 /// replaced with b' '
 #[derive(Debug, Clone, PartialEq)]
+#[allow(warnings)]
 pub enum ContextKind<VAO: VertexArrayObject, VAOD: Clone + VertexArrayObjectData<VAO = VAO>> {
     /// width, height
     WindowSize(i32, i32),
     Title(String),
     InputFunction(Option<GlfwInputFunction>),
+    MouseInputFunction(Option<GlfwMouseInputFunction>),
+    WindowFocusFunction(Option<GlfwWindowFocusFunction>),
+    FrameBufferSizeFunction(Option<GlfwFrameBufferSizeFunction>),
     VertexShaderText(String),
     FragmentShaderText(String),
     // maybe should be &VAOD but who cares
@@ -61,6 +72,11 @@ impl<VAO: VertexArrayObject, VAOD: Clone + VertexArrayObjectData<VAO = VAO>> Bui
         //TODO: need to put log for this when that's done
         // would say using default input (which for now will be nothing)
         let mut input_function: Option<GlfwInputFunction> = None;
+
+        let mut mouse_input_function: Option<GlfwMouseInputFunction> = None;
+        let mut window_focus_function: Option<GlfwWindowFocusFunction> = None;
+        let mut framebuffer_callback_function: Option<GlfwFrameBufferSizeFunction> = None;
+
         let mut vertex_array_object_data: Option<VAOD> = None;
         //TODO: eventually this will have defaults,
 
@@ -72,9 +88,6 @@ impl<VAO: VertexArrayObject, VAOD: Clone + VertexArrayObjectData<VAO = VAO>> Bui
                 ContextKind::Title(title_) => {
                     title = Some(to_cstring(title_, b' '));
                 }
-                ContextKind::InputFunction(callback) => {
-                    input_function = callback;
-                }
                 ContextKind::VertexShaderText(vertex_shader) => {
                     vertex_shader_text = Some(to_cstring(vertex_shader, b' '));
                 }
@@ -83,6 +96,14 @@ impl<VAO: VertexArrayObject, VAOD: Clone + VertexArrayObjectData<VAO = VAO>> Bui
                 }
                 ContextKind::VertexArrayObjectData(vao_data) => {
                     vertex_array_object_data = Some(vao_data);
+                }
+                ContextKind::InputFunction(callback) => {
+                    input_function = callback;
+                }
+                ContextKind::MouseInputFunction(callback) => mouse_input_function = callback,
+                ContextKind::WindowFocusFunction(callback) => window_focus_function = callback,
+                ContextKind::FrameBufferSizeFunction(callback) => {
+                    framebuffer_callback_function = callback
                 }
             }
         }
@@ -120,6 +141,9 @@ impl<VAO: VertexArrayObject, VAOD: Clone + VertexArrayObjectData<VAO = VAO>> Bui
                     vertex_shader_text.unwrap_unchecked(),
                     fragment_shader_text.unwrap_unchecked(),
                     input_function,
+                    mouse_input_function,
+                    window_focus_function,
+                    framebuffer_callback_function,
                     vertex_array_object_data.unwrap_unchecked(),
                 )
             }
@@ -140,6 +164,9 @@ impl<VAOD: VertexArrayObjectData> Context<VAOD> {
         vertex_shader_text: CString,
         fragment_shader_text: CString,
         input_function: Option<GlfwInputFunction>,
+        input_mouse_function: Option<GlfwMouseInputFunction>,
+        window_focus_function: Option<GlfwWindowFocusFunction>,
+        framebuffer_callback_function: Option<GlfwFrameBufferSizeFunction>,
         vertex_array_object_data: VAOD,
     ) -> Result<Self, String> {
         let window = Window::new(width, height, title)?;
@@ -160,6 +187,33 @@ impl<VAOD: VertexArrayObjectData> Context<VAOD> {
                 // then we either don't want input,
                 // or we just aren't the ones handling it
                 USER_KEY_FUNC = None;
+            }
+            if let Some(input_f) = input_mouse_function {
+                glfw::ffi::glfwSetMouseButtonCallback(
+                    window.handle,
+                    Some(main_context_mouse_input as GLFWmousebuttonfun),
+                );
+                USER_MOUSE_FUNC = Some(input_f);
+            } else {
+                USER_MOUSE_FUNC = None;
+            }
+            if let Some(glfw_func) = window_focus_function {
+                glfw::ffi::glfwSetWindowFocusCallback(
+                    window.handle,
+                    Some(main_context_window_focus as GLFWwindowfocusfun),
+                );
+                USER_WINDOW_FOCUS_FUNC = Some(glfw_func);
+            } else {
+                USER_WINDOW_FOCUS_FUNC = None;
+            }
+            if let Some(glfw_func) = framebuffer_callback_function {
+                glfw::ffi::glfwSetFramebufferSizeCallback(
+                    window.handle,
+                    Some(main_context_framebuffer_size as GLFWframebuffersizefun),
+                );
+                USER_FRAMEBUFFER_SIZE_FUNC = Some(glfw_func);
+            } else {
+                USER_FRAMEBUFFER_SIZE_FUNC = None;
             }
         }
         Ok(Self {

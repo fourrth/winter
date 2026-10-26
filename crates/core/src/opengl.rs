@@ -3,8 +3,6 @@
 
 use std::fmt::Debug;
 
-use num_integer::Integer;
-
 use crate::bindings::types::*;
 
 pub const OPENGL_TYPES: &[GLenum] = &[
@@ -44,10 +42,16 @@ pub const fn get_size(gl_type: GLenum) -> Option<usize> {
     }
 }
 
-pub trait GLIndexType: Integer + Debug + bytemuck::Pod {
+//TODO: replace this traits and implementation with a macro_rules because
+// this has gotten way too long
+pub trait GLIndexType: Debug + num_traits::Num + bytemuck::Pod + Ord {
     fn to_glenum() -> GLenum;
     fn from_usize(value: usize) -> Self;
     fn to_usize(self) -> usize;
+    fn to_u64(self) -> u64;
+    fn from_u64(value: u64) -> Self;
+    fn to_f32(self) -> f32;
+    fn from_f32(value: f32) -> Self;
 }
 impl GLIndexType for GLubyte {
     fn to_glenum() -> GLenum {
@@ -58,6 +62,18 @@ impl GLIndexType for GLubyte {
     }
     fn to_usize(self) -> usize {
         self as usize
+    }
+    fn to_u64(self) -> u64 {
+        self as u64
+    }
+    fn from_u64(value: u64) -> Self {
+        value as Self
+    }
+    fn to_f32(self) -> f32 {
+        self as f32
+    }
+    fn from_f32(value: f32) -> Self {
+        value as Self
     }
 }
 impl GLIndexType for GLushort {
@@ -70,6 +86,18 @@ impl GLIndexType for GLushort {
     fn to_usize(self) -> usize {
         self as usize
     }
+    fn to_u64(self) -> u64 {
+        self as u64
+    }
+    fn from_u64(value: u64) -> Self {
+        value as Self
+    }
+    fn to_f32(self) -> f32 {
+        self as f32
+    }
+    fn from_f32(value: f32) -> Self {
+        value as Self
+    }
 }
 impl GLIndexType for GLuint {
     fn to_glenum() -> GLenum {
@@ -81,12 +109,26 @@ impl GLIndexType for GLuint {
     fn to_usize(self) -> usize {
         self as usize
     }
+    fn to_u64(self) -> u64 {
+        self as u64
+    }
+    fn from_u64(value: u64) -> Self {
+        value as Self
+    }
+    fn to_f32(self) -> f32 {
+        self as f32
+    }
+    fn from_f32(value: f32) -> Self {
+        value as Self
+    }
 }
 
-pub trait GLVertexType: Debug + bytemuck::Pod {
+pub trait GLVertexType: Debug + num_traits::Num + bytemuck::Pod {
     fn to_glenum() -> GLenum;
     fn from_usize(value: usize) -> Self;
     fn to_usize(self) -> usize;
+    fn to_f32(self) -> f32;
+    fn from_f32(value: f32) -> Self;
 }
 impl GLVertexType for GLbyte {
     fn to_glenum() -> GLenum {
@@ -97,6 +139,12 @@ impl GLVertexType for GLbyte {
     }
     fn to_usize(self) -> usize {
         self as usize
+    }
+    fn to_f32(self) -> f32 {
+        self as f32
+    }
+    fn from_f32(value: f32) -> Self {
+        value as Self
     }
 }
 impl GLVertexType for GLubyte {
@@ -109,6 +157,12 @@ impl GLVertexType for GLubyte {
     fn to_usize(self) -> usize {
         self as usize
     }
+    fn to_f32(self) -> f32 {
+        self as f32
+    }
+    fn from_f32(value: f32) -> Self {
+        value as Self
+    }
 }
 impl GLVertexType for GLshort {
     fn to_glenum() -> GLenum {
@@ -119,6 +173,12 @@ impl GLVertexType for GLshort {
     }
     fn to_usize(self) -> usize {
         self as usize
+    }
+    fn to_f32(self) -> f32 {
+        self as f32
+    }
+    fn from_f32(value: f32) -> Self {
+        value as Self
     }
 }
 impl GLVertexType for GLushort {
@@ -131,6 +191,12 @@ impl GLVertexType for GLushort {
     fn to_usize(self) -> usize {
         self as usize
     }
+    fn to_f32(self) -> f32 {
+        self as f32
+    }
+    fn from_f32(value: f32) -> Self {
+        value as Self
+    }
 }
 impl GLVertexType for GLint {
     fn to_glenum() -> GLenum {
@@ -141,6 +207,12 @@ impl GLVertexType for GLint {
     }
     fn to_usize(self) -> usize {
         self as usize
+    }
+    fn to_f32(self) -> f32 {
+        self as f32
+    }
+    fn from_f32(value: f32) -> Self {
+        value as Self
     }
 }
 impl GLVertexType for GLuint {
@@ -153,6 +225,12 @@ impl GLVertexType for GLuint {
     fn to_usize(self) -> usize {
         self as usize
     }
+    fn to_f32(self) -> f32 {
+        self as f32
+    }
+    fn from_f32(value: f32) -> Self {
+        value as Self
+    }
 }
 impl GLVertexType for GLfloat {
     fn to_glenum() -> GLenum {
@@ -163,5 +241,11 @@ impl GLVertexType for GLfloat {
     }
     fn to_usize(self) -> usize {
         self as usize
+    }
+    fn to_f32(self) -> f32 {
+        self as f32
+    }
+    fn from_f32(value: f32) -> Self {
+        value as Self
     }
 }

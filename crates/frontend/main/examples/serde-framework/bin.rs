@@ -5,7 +5,7 @@ use winter_core::bindings;
 use winter_simple::{
     constructs, primitives,
     shapes::{self, Translate},
-    IndexGrid, IntoDrawable, VertexArrayObject,
+    Drawable, IndexGrid, IntoDrawable, VertexArrayObject,
 };
 
 fn main() -> Result<(), String> {
@@ -49,14 +49,14 @@ fn main() -> Result<(), String> {
     };
 
     let rect_tri_serialized =
-        serde_json::to_string::<winter_simple::primitives::Component<f32, u32, f32, 3>>(
-            &constructs::RectangleSolidColor::<f32, u32, f32>::new1(
+        serde_json::to_string::<winter_simple::primitives::Component<f32, f32>>(
+            &constructs::RectangleSolidColor::<f32, f32>::new1(
                 position.shift(Vector3::from([0.5, 0.0, 0.0])),
                 color2,
             )
             .into_drawable()
             .merge(
-                constructs::TriangleSolidColor::new1(
+                constructs::TriangleSolidColor::<f32, f32>::new1(
                     position.to_triangles()[0].shift(Vector3::from([0.0, -0.5, 0.0])),
                     color3,
                 )
@@ -68,30 +68,28 @@ fn main() -> Result<(), String> {
         position, index_grid, color_data,
     ))
     .unwrap();
-    let vao_builder: winter_simple::vao::Builder<f32, u32, f32, 3, false, { bindings::TRIANGLES }> =
-        winter_simple::vao::Builder::create()
-            .add(
-                serde_json::from_str::<constructs::PixelGridSolidColorIndividual<_, _, _>>(
-                    &pixel_grid,
-                )
-                .unwrap()
-                .into_drawable(),
+    let vao_builder: winter_simple::VaoSimple<f32, f32> = winter_simple::VaoSimple::create()
+        .add(
+            serde_json::from_str::<constructs::PixelGridSolidColorIndividual<f32, f32>>(
+                &pixel_grid,
             )
-            .add(
-                serde_json::from_str::<primitives::Component<_, _, _, 3>>(&rect_tri_serialized)
-                    .unwrap(),
-            );
+            .unwrap()
+            .into_drawable(),
+        )
+        .add(
+            serde_json::from_str::<primitives::Component<f32, f32>>(&rect_tri_serialized)
+                .unwrap(),
+        );
 
-    let mut context: Context<
-        winter_simple::vao::Builder<f32, u32, f32, 3, false, { bindings::TRIANGLES }>,
-    > = winter::context::Builder::new()
-        .add(ContextKind::WindowSize(width, height))
-        .add(ContextKind::Title(title))
-        .add(ContextKind::VertexShaderText(vertex_shader_text))
-        .add(ContextKind::FragmentShaderText(fragment_shader_text))
-        .add(ContextKind::InputFunction(None))
-        .add(ContextKind::VertexArrayObjectData(vao_builder))
-        .build()?;
+    let mut context: Context<winter_simple::VaoSimple<f32, f32>> =
+        winter::context::Builder::new()
+            .add(ContextKind::WindowSize(width, height))
+            .add(ContextKind::Title(title))
+            .add(ContextKind::VertexShaderText(vertex_shader_text))
+            .add(ContextKind::FragmentShaderText(fragment_shader_text))
+            .add(ContextKind::InputFunction(None))
+            .add(ContextKind::VertexArrayObjectData(vao_builder))
+            .build()?;
 
     unsafe {
         context.program.enable();

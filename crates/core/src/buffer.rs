@@ -1,9 +1,6 @@
 use crate::{
-    bindings::{
-        self,
-        types::{GLboolean, GLint},
-    },
-    opengl::GLVertexType,
+    bindings::{self},
+    raw,
     vao::VertexArrayObject,
     NonZeroUInt,
 };
@@ -25,14 +22,14 @@ impl Drop for Guard {
     }
 }
 
-pub trait VertexBuffer<V: GLVertexType, const L: GLint, const N: bool> {
+pub trait VertexBuffer {
     /// Get internal gl id
     fn id(&self) -> NonZeroUInt;
     /// Get the layout of the data
-    fn layout(&self) -> vertex::Layout<V, L>;
+    fn layout(&self) -> vertex::Layout;
     fn bind(&self) {
         unsafe {
-            bindings::BindBuffer(bindings::ARRAY_BUFFER, self.id().into());
+            raw::buffers::BindBuffer(buffers::BufferTarget::ArrayBuffer, self.id().into());
         }
     }
     /// Binds the buffer to the specified VertexArrayObject
@@ -43,9 +40,9 @@ pub trait VertexBuffer<V: GLVertexType, const L: GLint, const N: bool> {
         unsafe {
             bindings::VertexAttribPointer(
                 self.layout().attrib_loc,
-                L,
-                V::to_glenum(),
-                N as GLboolean,
+                self.layout().attrib_len,
+                self.layout().ty,
+                bindings::FALSE,
                 0,
                 std::ptr::null_mut::<c_void>(),
             );
@@ -59,6 +56,8 @@ pub trait ElementArrayBuffer {
     /// Get the amount of indices stored in the buffer
     fn len(&self) -> usize;
     fn bind(&self) {
-        unsafe { bindings::BindBuffer(bindings::ELEMENT_ARRAY_BUFFER, self.id().into()) }
+        unsafe {
+            raw::buffers::BindBuffer(buffers::BufferTarget::ElementArrayBuffer, self.id().into());
+        }
     }
 }

@@ -1,6 +1,6 @@
 use bytemuck::{Pod, Zeroable};
 use glmath::{
-    vector::{Vector3, Vector4},
+    vector::{Vector2, Vector3, Vector4},
     Element,
 };
 use winter_core::opengl::GLVertexType;
@@ -17,6 +17,7 @@ fn vector4_to_vector3_norm<T: Element>(v: Vector4<T>) -> Vector3<T> {
 //TODO: make this more expansive
 pub trait Translate<V: GLVertexType + Element> {
     fn shift(self, direction: Vector3<V>) -> Self;
+    fn scale(self, scalar: V) -> Self;
 }
 
 #[repr(C, packed)]
@@ -69,6 +70,13 @@ impl<V: GLVertexType + Element> Translate<V> for Triangle<V> {
             bottom_left: self.bottom_left.add(direction),
             bottom_right: self.bottom_right.add(direction),
             top: self.top.add(direction),
+        }
+    }
+    fn scale(self, scalar: V) -> Self {
+        Self {
+            bottom_left: self.bottom_left.mul_scalar(scalar),
+            bottom_right: self.bottom_right.mul_scalar(scalar),
+            top: self.top.mul_scalar(scalar),
         }
     }
 }
@@ -125,6 +133,82 @@ unsafe impl<V: GLVertexType + Element> Zeroable for Triangle4D<V> {
         }
     }
 }
+
+#[repr(C, packed)]
+#[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Rectangle2d<V: GLVertexType + Element> {
+    pub bottom_left_corner: Vector2<V>,
+    pub bottom_right_corner: Vector2<V>,
+    pub top_right_corner: Vector2<V>,
+    pub top_left_corner: Vector2<V>,
+}
+
+impl<V: GLVertexType + Element> From<[Vector2<V>; 4]> for Rectangle2d<V> {
+    fn from(value: [Vector2<V>; 4]) -> Self {
+        Self {
+            bottom_left_corner: value[0],
+            bottom_right_corner: value[1],
+            top_right_corner: value[2],
+            top_left_corner: value[3],
+        }
+    }
+}
+
+impl<V: GLVertexType + Element> Rectangle2d<V> {
+    #[allow(non_snake_case)]
+    pub fn to_3D(self, z_value: V) -> Rectangle<V> {
+        Rectangle {
+            bottom_left_corner: Vector3::from((self.bottom_left_corner, z_value)),
+            bottom_right_corner: Vector3::from((self.bottom_right_corner, z_value)),
+            top_right_corner: Vector3::from((self.top_right_corner, z_value)),
+            top_left_corner: Vector3::from((self.top_left_corner, z_value)),
+        }
+    }
+    #[allow(non_snake_case)]
+    pub fn to_4D(self, z_value: V) -> Rectangle4D<V> {
+        self.to_3D(z_value).to_4D()
+    }
+    pub fn new(
+        bottom_left_corner: Vector2<V>,
+        bottom_right_corner: Vector2<V>,
+        top_right_corner: Vector2<V>,
+        top_left_corner: Vector2<V>,
+    ) -> Self {
+        Self {
+            bottom_left_corner,
+            bottom_right_corner,
+            top_right_corner,
+            top_left_corner,
+        }
+    }
+    pub fn from_2points(bottom_left_corner: Vector2<V>, top_right_corner: Vector2<V>) -> Self {
+        let diff = top_right_corner.sub(bottom_left_corner);
+
+        let bottom_right_corner = bottom_left_corner.add(Vector2::from([diff[0], V::zero()]));
+        let top_left_corner = bottom_left_corner.add(Vector2::from([V::zero(), diff[1]]));
+
+        Self::new(
+            bottom_left_corner,
+            bottom_right_corner,
+            top_right_corner,
+            top_left_corner,
+        )
+    }
+}
+
+unsafe impl<V: GLVertexType + Element> Pod for Rectangle2d<V> {}
+unsafe impl<V: GLVertexType + Element> Zeroable for Rectangle2d<V> {
+    fn zeroed() -> Self {
+        Self {
+            bottom_left_corner: Vector2::zeroed(),
+            bottom_right_corner: Vector2::zeroed(),
+            top_right_corner: Vector2::zeroed(),
+            top_left_corner: Vector2::zeroed(),
+        }
+    }
+}
+
 #[repr(C, packed)]
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -169,6 +253,23 @@ impl<V: GLVertexType + Element> Rectangle<V> {
             top_left_corner,
         }
     }
+    pub fn from_2d_2points(
+        bottom_left_corner: Vector2<V>,
+        top_right_corner: Vector2<V>,
+        depth: V,
+    ) -> Self {
+        let diff = top_right_corner.sub(bottom_left_corner);
+
+        let bottom_right_corner = bottom_left_corner.add(Vector2::from([diff[0], V::zero()]));
+        let top_left_corner = bottom_left_corner.add(Vector2::from([V::zero(), diff[1]]));
+
+        Self::new(
+            Vector3::from((bottom_left_corner, depth)),
+            Vector3::from((bottom_right_corner, depth)),
+            Vector3::from((top_right_corner, depth)),
+            Vector3::from((top_left_corner, depth)),
+        )
+    }
     pub fn to_triangles(self) -> [Triangle<V>; 2] {
         [
             Triangle {
@@ -203,6 +304,14 @@ impl<V: GLVertexType + Element> Translate<V> for Rectangle<V> {
             bottom_right_corner: self.bottom_right_corner.add(direction),
             top_right_corner: self.top_right_corner.add(direction),
             top_left_corner: self.top_left_corner.add(direction),
+        }
+    }
+    fn scale(self, scalar: V) -> Self {
+        Self {
+            bottom_left_corner: self.bottom_left_corner.mul_scalar(scalar),
+            bottom_right_corner: self.bottom_right_corner.mul_scalar(scalar),
+            top_right_corner: self.top_right_corner.mul_scalar(scalar),
+            top_left_corner: self.top_left_corner.mul_scalar(scalar),
         }
     }
 }

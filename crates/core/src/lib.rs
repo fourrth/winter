@@ -7,6 +7,7 @@ pub mod bindings {
 pub mod buffer;
 pub mod opengl;
 pub mod raw;
+pub mod texture;
 pub mod uniform;
 pub mod vao;
 
